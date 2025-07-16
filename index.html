@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ANSAR ALMOUYASSAR</title>
-  <link rel="stylesheet" href="src/styles/main.css">
+  <link rel="stylesheet" href="main.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
@@ -22,30 +22,157 @@
     </nav>
   </header>
   <main>
-    <section class="hero">
-      <h1>ANSAR ALMOUYASSAR</h1>
-      <p>Rejoignez notre mission pour un impact communautaire et spirituel.</p>
-      <video controls>
-        <source src="assets/videos/intro.mp4" type="video/mp4">
-        Votre navigateur ne supporte pas la vidéo.
-      </video>
-      <button class="cta-button" onclick="window.location.href='login.html'">Se connecter</button>
+    <!-- Page d'accueil -->
+    <section id="home" class="page active">
+      <div class="hero">
+        <h1>ANSAR ALMOUYASSAR</h1>
+        <p>Sous la direction de notre président, <strong>Mouhamed Niang</strong>, notre association œuvre pour le développement communautaire et spirituel.</p>
+        <video controls>
+          <source src="assets/videos/intro.mp4" type="video/mp4">
+          Votre navigateur ne supporte pas la vidéo.
+        </video>
+        <div id="countdown">JOUR J - 17 jours 15h 23m 41s</div>
+        <button class="cta-button" onclick="showPage('login')">Se connecter</button>
+      </div>
+    </section>
+
+    <!-- Page de connexion -->
+    <section id="login" class="page">
+      <h2>Connexion</h2>
+      <form id="login-form">
+        <label for="member-code">Code Membre</label>
+        <input type="text" id="member-code" placeholder="Entrez votre code unique" required>
+        <label for="password">Mot de passe (Date de naissance : JJMMAAAA)</label>
+        <input type="password" id="password" placeholder="Ex. : 10012005" required>
+        <button type="submit" class="cta-button">Se connecter</button>
+      </form>
+      <p id="error-message" style="color: red; display: none;"></p>
+    </section>
+
+    <!-- Page des membres -->
+    <section id="members" class="page">
+      <h2>Liste des Membres</h2>
+      <div id="members-list"></div>
+    </section>
+
+    <!-- Page des cotisations -->
+    <section id="contributions" class="page">
+      <h2>Cotisations</h2>
+      <p>Cotisation mensuelle : 2000 FCFA</p>
+      <div id="contributions-list"></div>
+      <button class="cta-button" onclick="payContribution()">Payer via Wave/Orange Money</button>
+    </section>
+
+    <!-- Page des infos -->
+    <section id="events" class="page">
+      <h2>Activités à venir</h2>
+      <div id="events-list"></div>
+    </section>
+
+    <!-- Page de la galerie -->
+    <section id="gallery" class="page">
+      <h2>Galerie</h2>
+      <div id="gallery-images" class="gallery-grid"></div>
+    </section>
+
+    <!-- Espace secret -->
+    <section id="secret" class="page">
+      <h2>Espace Secret</h2>
+      <h3>Gestion des Membres</h3>
+      <form id="add-member-form">
+        <input type="text" id="new-member-name" placeholder="Nom et Prénom" required>
+        <input type="text" id="new-member-dob" placeholder="Date de naissance (JJMMAAAA)" required>
+        <select id="new-member-status">
+          <option value="actif">Actif</option>
+          <option value="liste-noire">Liste noire</option>
+        </select>
+        <button type="submit" class="cta-button">Ajouter Membre</button>
+      </form>
+      <h3>Gestion des Cotisations</h3>
+      <form id="add-contribution-form">
+        <input type="text" id="contribution-name" placeholder="Nom (ex. : Conférence)" required>
+        <input type="number" id="contribution-amount" placeholder="Montant (FCFA)" required>
+        <button type="submit" class="cta-button">Ajouter Cotisation</button>
+      </form>
+      <h3>Suggestions des Membres</h3>
+      <div id="suggestions-list"></div>
+      <h3>Appels Audio/Vidéo</h3>
+      <button class="cta-button" onclick="startCall('group')">Lancer un appel de groupe</button>
+      <button class="cta-button" onclick="startCall('individual')">Lancer un appel individuel</button>
+      <button class="cta-button" onclick="startLive()">Lancer un live</button>
+    </section>
+
+    <!-- Page des notifications -->
+    <section id="notifications" class="page">
+      <h2>Notifications</h2>
+      <div id="notifications-list"></div>
+    </section>
+
+    <!-- Page Coran -->
+    <section id="kamile" class="page">
+      <h2>Coran - 30 Juz'</h2>
+      <select id="coran-language">
+        <option value="ar">Arabe</option>
+        <option value="fr">Français</option>
+        <option value="en">Anglais</option>
+      </select>
+      <div id="coran-content"></div>
+    </section>
+
+    <!-- Espace personnel -->
+    <section id="personal" class="page">
+      <h2 id="personal-title">Mon Espace Personnel</h2>
+      <div id="personal-info"></div>
+      <h3>Mes Cotisations</h3>
+      <div id="personal-contributions"></div>
+      <h3>Suggestions</h3>
+      <form id="suggestion-form">
+        <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
+        <button type="submit" class="cta-button">Envoyer</button>
+      </form>
+      <h3>Paramètres de verrouillage</h3>
+      <select id="lock-duration">
+        <option value="1h">1 heure</option>
+        <option value="24h">24 heures</option>
+        <option value="48h">48 heures</option>
+      </select>
+    </section>
+
+    <!-- Page des paramètres -->
+    <section id="settings" class="page">
+      <h2>Paramètres</h2>
+      <label>Mode sombre/clair</label>
+      <button class="cta-button" onclick="toggleTheme()">Changer le thème</button>
+      <label>Langue</label>
+      <select id="settings-language">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+      </select>
+      <label>Durée de verrouillage</label>
+      <select id="settings-lock-duration">
+        <option value="1h">1 heure</option>
+        <option value="24h">24 heures</option>
+        <option value="48h">48 heures</option>
+      </select>
     </section>
   </main>
   <footer>
     <nav class="bottom-nav">
-      <a href="index.html" class="nav-item active"><span class="material-icons">home</span>Accueil</a>
-      <a href="members.html" class="nav-item"><span class="material-icons">people</span>Membres</a>
-      <a href="contributions.html" class="nav-item"><span class="material-icons">payment</span>Cotisations</a>
-      <a href="events.html" class="nav-item"><span class="material-icons">event</span>Infos</a>
-      <a href="gallery.html" class="nav-item"><span class="material-icons">photo_library</span>Galerie</a>
-      <a href="notifications.html" class="nav-item"><span class="material-icons">notifications</span>Notifications</a>
-      <a href="kamile.html" class="nav-item"><span class="material-icons">book</span>Kamile</a>
+      <a href="#" class="nav-item active" onclick="showPage('home')"><span class="material-icons">home</span>Accueil</a>
+      <a href="#" class="nav-item" onclick="showPage('members')"><span class="material-icons">people</span>Membres</a>
+      <a href="#" class="nav-item" onclick="showPage('contributions')"><span class="material-icons">payment</span>Cotisations</a>
+      <a href="#" class="nav-item" onclick="showPage('events')"><span class="material-icons">event</span>Infos</a>
+      <a href="#" class="nav-item" onclick="showPage('gallery')"><span class="material-icons">photo_library</span>Galerie</a>
+      <a href="#" class="nav-item" onclick="showPage('notifications')"><span class="material-icons">notifications</span>Notifications</a>
+      <a href="#" class="nav-item" onclick="showPage('kamile')"><span class="material-icons">book</span>Coran</a>
+      <a href="#" class="nav-item" onclick="showPage('personal')"><span class="material-icons">person</span>Personnel</a>
+      <a href="#" class="nav-item" onclick="showPage('settings')"><span class="material-icons">settings</span>Paramètres</a>
     </nav>
   </footer>
   <div class="chatbot-button">
     <span class="material-icons">chat</span>
   </div>
-  <script src="src/scripts/main.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
