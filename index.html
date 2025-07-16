@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ANSAR ALMOUYASSAR</title>
+  <link rel="stylesheet" href="src/styles/main.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <header>
+    <nav class="top-nav">
+      <img src="assets/images/logo.png" alt="Logo ANSAR ALMOUYASSAR" class="logo">
+      <select id="language-selector">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+      </select>
+      <span class="material-icons theme-toggle">brightness_4</span>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>ANSAR ALMOUYASSAR</h1>
+      <p>Rejoignez notre mission pour un impact communautaire et spirituel.</p>
+      <video controls>
+        <source src="assets/videos/intro.mp4" type="video/mp4">
+        Votre navigateur ne supporte pas la vidéo.
+      </video>
+      <button class="cta-button" onclick="window.location.href='login.html'">Se connecter</button>
+    </section>
+  </main>
+  <footer>
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item active"><span class="material-icons">home</span>Accueil</a>
+      <a href="members.html" class="nav-item"><span class="material-icons">people</span>Membres</a>
+      <a href="contributions.html" class="nav-item"><span class="material-icons">payment</span>Cotisations</a>
+      <a href="events.html" class="nav-item"><span class="material-icons">event</span>Infos</a>
+      <a href="gallery.html" class="nav-item"><span class="material-icons">photo_library</span>Galerie</a>
+      <a href="notifications.html" class="nav-item"><span class="material-icons">notifications</span>Notifications</a>
+      <a href="kamile.html" class="nav-item"><span class="material-icons">book</span>Kamile</a>
+    </nav>
+  </footer>
+  <div class="chatbot-button">
+    <span class="material-icons">chat</span>
+  </div>
+  <script src="src/scripts/main.js"></script>
+</body>
+</html>
