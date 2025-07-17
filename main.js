@@ -28,6 +28,8 @@ const sensitiveFiles = [];
 const internalDocs = [];
 const sensitiveFilesPassword = '0000';
 const presidentCode = '0000';
+let isChatOpen = false;
+let selectedCallMembers = [];
 
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
@@ -41,11 +43,10 @@ function showPage(pageId) {
   if (pageId === 'messages') updateMessagesList();
   if (pageId === 'coran') updateCoranContent();
   if (pageId === 'personal') {
-    document.querySelector('#personal-login').style.display = currentUser ? 'none' : 'block';
-    document.querySelector('#personal-content').style.display = currentUser ? 'block' : 'none';
-    if (currentUser) updatePersonalInfo();
+    document.querySelector('#personal-login').style.display = currentUser && currentUser.role !== 'admin' ? 'none' : 'block';
+    document.querySelector('#personal-content').style.display = currentUser && currentUser.role !== 'admin' ? 'block' : 'none';
+    if (currentUser && currentUser.role !== 'admin') updatePersonalInfo();
   }
-  if (pageId === 'secret') showTab('add-member');
 }
 
 function showTab(tabId) {
@@ -63,6 +64,7 @@ function showTab(tabId) {
   if (tabId === 'sensitive-files') document.querySelector('#sensitive-files-content').style.display = 'none';
   if (tabId === 'internal-docs') updateInternalDocsList();
   if (tabId === 'stats') updateStats();
+  if (tabId === 'video-calls') initVideoCall();
 }
 
 function toggleTheme() {
@@ -98,24 +100,43 @@ document.querySelector('#settings-language').addEventListener('change', (e) => {
   document.querySelector('#language-selector').value = lang;
 });
 
-document.querySelector('.chatbot-button').addEventListener('click', () => {
-  alert('Assistant IA : Posez vos questions sur ANSAR ALMOUYASSAR !');
+function toggleChatbot() {
+  isChatOpen = !isChatOpen;
+  document.querySelector('#chatbot').style.display = isChatOpen ? 'block' : 'none';
+  if (isChatOpen) {
+    document.querySelector('#chatbot-messages').innerHTML = '<div class="chatbot-message received">Bienvenue ! Posez une question ou utilisez un mot-clé comme "association", "membre", "cotisation", etc.</div>';
+  }
+}
+
+document.querySelector('.chatbot-button').addEventListener('click', toggleChatbot);
+
+document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = document.querySelector('#chatbot-input');
+  const message = input.value;
+  if (!message) return;
+  const messages = document.querySelector('#chatbot-messages');
+  messages.innerHTML += `<div class="chatbot-message sent">${message}</div>`;
+  if (message === 'ADMIN12301012000') {
+    document.querySelector('#secret-entry').style.display = 'block';
+  } else {
+    const response = getChatbotResponse(message);
+    messages.innerHTML += `<div class="chatbot-message received">${response}</div>`;
+  }
+  input.value = '';
+  messages.scrollTop = messages.scrollHeight;
 });
 
-document.querySelector('#login-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const code = document.querySelector('#member-code').value;
-  const password = document.querySelector('#password').value;
-  const errorMessage = document.querySelector('#error-message');
-
-  if (code === 'ADMIN123' && password === '01012000') {
+function enterSecret() {
+  const password = document.querySelector('#secret-password').value;
+  if (password === 'JESUISMEMBRE66') {
     currentUser = { code: 'ADMIN123', role: 'admin' };
     showPage('secret');
+    toggleChatbot();
   } else {
-    errorMessage.textContent = 'Code ou mot de passe incorrect';
-    errorMessage.style.display = 'block';
+    document.querySelector('#chatbot-messages').innerHTML += '<div class="chatbot-message received">Mot de passe incorrect.</div>';
   }
-});
+}
 
 document.querySelector('#personal-login-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -144,6 +165,13 @@ document.querySelector('#personal-login-form').addEventListener('submit', (e) =>
   }
 });
 
+function logoutPersonal() {
+  currentUser = null;
+  document.querySelector('#personal-login').style.display = 'block';
+  document.querySelector('#personal-content').style.display = 'none';
+  showPage('home');
+}
+
 document.querySelector('#add-member-form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
@@ -168,6 +196,7 @@ document.querySelector('#add-member-form').addEventListener('submit', (e) => {
   document.querySelector('#add-member-form').reset();
   updateMembersList();
   updateEditMembersList();
+  updateCallMembersList();
   updateStats();
 });
 
@@ -184,6 +213,7 @@ document.querySelector('#delete-member-form').addEventListener('submit', (e) => 
     members.splice(index, 1);
     updateMembersList();
     updateEditMembersList();
+    updateCallMembersList();
     updateStats();
     document.querySelector('#delete-member-form').style.display = 'none';
   }
@@ -217,7 +247,7 @@ document.querySelector('#add-gallery-form').addEventListener('submit', (e) => {
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#gallery-file').files[0];
   if (file) {
-    gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url: URL.createObjectURL(file) });
+    gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url: URL.createObjectURL(file), name: file.name });
     document.querySelector('#add-gallery-form').reset();
     updateGalleryContent();
     updateGalleryAdminList();
@@ -264,6 +294,7 @@ document.querySelector('#sensitive-files-auth').addEventListener('submit', (e) =
   const password = document.querySelector('#sensitive-files-password').value;
   if (password === sensitiveFilesPassword) {
     document.querySelector('#sensitive-files-content').style.display = 'block';
+    document.querySelector('#sensitive-files-search').style.display = 'block';
     updateSensitiveFilesList();
   } else {
     alert('Mot de passe incorrect');
@@ -293,49 +324,58 @@ document.querySelector('#add-internal-doc-form').addEventListener('submit', (e) 
 });
 
 function updateMembersList() {
+  const search = document.querySelector('#members-search').value.toLowerCase();
   const list = document.querySelector('#members-list');
-  list.innerHTML = members.map(m => `
-    <div class="member-card">
-      <p><strong>${m.firstname} ${m.lastname}</strong></p>
-      <p><strong>Numéro :</strong> ${m.code}</p>
-    </div>
-  `).join('');
+  list.innerHTML = members
+    .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
+    .map(m => `
+      <div class="member-card">
+        <p><strong>${m.firstname} ${m.lastname}</strong></p>
+        <p><strong>Numéro :</strong> ${m.code}</p>
+      </div>
+    `).join('');
 }
 
 function updateContributionsList() {
+  const search = document.querySelector('#contributions-search').value.toLowerCase();
   const list = document.querySelector('#contributions-list');
-  list.innerHTML = contributions.map(c => `
-    <div class="contribution-card">
-      <p><strong>${c.name}</strong>: ${c.amount} FCFA</p>
-    </div>
-  `).join('');
+  list.innerHTML = contributions
+    .filter(c => c.name.toLowerCase().includes(search))
+    .map(c => `
+      <div class="contribution-card">
+        <p><strong>${c.name}</strong>: ${c.amount} FCFA</p>
+      </div>
+    `).join('');
 }
 
 function updateContributionsAdminList() {
+  const search = document.querySelector('#contributions-admin-search').value.toLowerCase();
   const list = document.querySelector('#contributions-admin-list');
-  list.innerHTML = contributions.map(c => `
-    <div class="contribution-card">
-      <h4>${c.name} (${c.amount} FCFA)</h4>
-      ${members.map(m => `
-        <div>
-          <p>${m.firstname} ${m.lastname}</p>
-          ${c.name === 'Mensuelle' ? `
-            <select onchange="updateMonthlyPayment('${m.code}', this.value)">
-              <option value="">Choisir un mois</option>
-              <option value="0">Mois 1</option>
-              <option value="1">Mois 2</option>
-              <option value="2">Mois 3</option>
-            </select>
-            <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid.map(p => p ? 'Payé' : 'Non payé').join(', ')}</p>
-          ` : `
-            <input type="checkbox" ${m.contributions.find(cont => cont.name === c.name).paid ? 'checked' : ''} onchange="updatePayment('${m.code}', '${c.name}', this.checked)">
-            <input type="number" placeholder="Montant partiel" value="${m.contributions.find(cont => cont.name === c.name).partial}" onchange="updatePartialPayment('${m.code}', '${c.name}', this.value)">
-            <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid ? 'Payé' : `Non payé (${m.contributions.find(cont => cont.name === c.name).partial} FCFA)`}</p>
-          `}
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
+  list.innerHTML = contributions
+    .filter(c => c.name.toLowerCase().includes(search))
+    .map(c => `
+      <div class="contribution-card">
+        <h4>${c.name} (${c.amount} FCFA)</h4>
+        ${members.map(m => `
+          <div>
+            <p>${m.firstname} ${m.lastname}</p>
+            ${c.name === 'Mensuelle' ? `
+              <select onchange="updateMonthlyPayment('${m.code}', this.value)">
+                <option value="">Choisir un mois</option>
+                <option value="0">Mois 1</option>
+                <option value="1">Mois 2</option>
+                <option value="2">Mois 3</option>
+              </select>
+              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid.map(p => p ? 'Payé' : 'Non payé').join(', ')}</p>
+            ` : `
+              <input type="checkbox" ${m.contributions.find(cont => cont.name === c.name).paid ? 'checked' : ''} onchange="updatePayment('${m.code}', '${c.name}', this.checked)">
+              <input type="number" placeholder="Montant partiel" value="${m.contributions.find(cont => cont.name === c.name).partial}" onchange="updatePartialPayment('${m.code}', '${c.name}', this.value)">
+              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid ? 'Payé' : `Non payé (${m.contributions.find(cont => cont.name === c.name).partial} FCFA)`}</p>
+            `}
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
 }
 
 function updateMonthlyPayment(memberCode, month) {
@@ -369,15 +409,18 @@ function updatePartialPayment(memberCode, contributionName, amount) {
 }
 
 function updateEditMembersList() {
+  const search = document.querySelector('#edit-member-search').value.toLowerCase();
   const list = document.querySelector('#edit-members-list');
-  list.innerHTML = members.map(m => `
-    <div class="member-card">
-      <p><strong>Prénom :</strong> ${m.firstname}</p>
-      <p><strong>Nom :</strong> ${m.lastname}</p>
-      <button class="cta-button" onclick="editMember('${m.code}')">Modifier</button>
-      <button class="cta-button" onclick="deleteMember('${m.code}')">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = members
+    .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
+    .map(m => `
+      <div class="member-card">
+        <p><strong>Prénom :</strong> ${m.firstname}</p>
+        <p><strong>Nom :</strong> ${m.lastname}</p>
+        <button class="cta-button" onclick="editMember('${m.code}')">Modifier</button>
+        <button class="cta-button" onclick="deleteMember('${m.code}')">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function editMember(code) {
@@ -404,26 +447,32 @@ function deleteMember(code) {
 }
 
 function updateActivitiesList() {
+  const search = document.querySelector('#activities-search').value.toLowerCase();
   const list = document.querySelector('#activities-list');
-  list.innerHTML = activities.map(a => `
-    <div class="activity-card">
-      <h4>${a.name}</h4>
-      <p>${a.description}</p>
-      ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
-    </div>
-  `).join('');
+  list.innerHTML = activities
+    .filter(a => a.name.toLowerCase().includes(search) || a.description.toLowerCase().includes(search))
+    .map(a => `
+      <div class="activity-card">
+        <h4>${a.name}</h4>
+        <p>${a.description}</p>
+        ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
+      </div>
+    `).join('');
 }
 
 function updateActivitiesAdminList() {
+  const search = document.querySelector('#activities-admin-search').value.toLowerCase();
   const list = document.querySelector('#activities-admin-list');
-  list.innerHTML = activities.map((a, index) => `
-    <div class="activity-card">
-      <h4>${a.name}</h4>
-      <p>${a.description}</p>
-      ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
-      <button class="cta-button" onclick="deleteActivity(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = activities
+    .filter(a => a.name.toLowerCase().includes(search) || a.description.toLowerCase().includes(search))
+    .map((a, index) => `
+      <div class="activity-card">
+        <h4>${a.name}</h4>
+        <p>${a.description}</p>
+        ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
+        <button class="cta-button" onclick="deleteActivity(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteActivity(index) {
@@ -434,22 +483,28 @@ function deleteActivity(index) {
 }
 
 function updateGalleryContent() {
+  const search = document.querySelector('#gallery-search').value.toLowerCase();
   const content = document.querySelector('#gallery-content');
-  content.innerHTML = gallery.map(g => `
-    <div>
-      ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie">` : `<video src="${g.url}" controls></video>`}
-    </div>
-  `).join('');
+  content.innerHTML = gallery
+    .filter(g => g.name.toLowerCase().includes(search))
+    .map(g => `
+      <div>
+        ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie">` : `<video src="${g.url}" controls></video>`}
+      </div>
+    `).join('');
 }
 
 function updateGalleryAdminList() {
+  const search = document.querySelector('#gallery-admin-search').value.toLowerCase();
   const list = document.querySelector('#gallery-admin-list');
-  list.innerHTML = gallery.map((g, index) => `
-    <div>
-      ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie" style="max-width: 100%; border-radius: 10px;">` : `<video src="${g.url}" controls style="max-width: 100%; border-radius: 10px;"></video>`}
-      <button class="cta-button" onclick="deleteGalleryItem(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = gallery
+    .filter(g => g.name.toLowerCase().includes(search))
+    .map((g, index) => `
+      <div>
+        ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie" style="max-width: 100%; border-radius: 10px;">` : `<video src="${g.url}" controls style="max-width: 100%; border-radius: 10px;"></video>`}
+        <button class="cta-button" onclick="deleteGalleryItem(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteGalleryItem(index) {
@@ -460,24 +515,30 @@ function deleteGalleryItem(index) {
 }
 
 function updateMessagesList() {
+  const search = document.querySelector('#messages-search').value.toLowerCase();
   const list = document.querySelector('#messages-list');
-  list.innerHTML = messages.map(m => `
-    <div class="message-card">
-      <p>${m.text}</p>
-      <p><small>${new Date(m.date).toLocaleString()}</small></p>
-    </div>
-  `).join('');
+  list.innerHTML = messages
+    .filter(m => m.text.toLowerCase().includes(search))
+    .map(m => `
+      <div class="message-card">
+        <p>${m.text}</p>
+        <p><small>${new Date(m.date).toLocaleString()}</small></p>
+      </div>
+    `).join('');
 }
 
 function updateMessagesAdminList() {
+  const search = document.querySelector('#messages-admin-search').value.toLowerCase();
   const list = document.querySelector('#messages-admin-list');
-  list.innerHTML = messages.map((m, index) => `
-    <div class="message-card">
-      <p>${m.text}</p>
-      <p><small>${new Date(m.date).toLocaleString()}</small></p>
-      <button class="cta-button" onclick="deleteMessage(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = messages
+    .filter(m => m.text.toLowerCase().includes(search))
+    .map((m, index) => `
+      <div class="message-card">
+        <p>${m.text}</p>
+        <p><small>${new Date(m.date).toLocaleString()}</small></p>
+        <button class="cta-button" onclick="deleteMessage(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteMessage(index) {
@@ -488,13 +549,16 @@ function deleteMessage(index) {
 }
 
 function updateNotesList() {
+  const search = document.querySelector('#notes-search').value.toLowerCase();
   const list = document.querySelector('#notes-list');
-  list.innerHTML = notes.map((n, index) => `
-    <div class="note-card">
-      <p><strong>${n.theme}</strong>: ${n.text}</p>
-      <button class="cta-button" onclick="deleteNote(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = notes
+    .filter(n => n.theme.toLowerCase().includes(search) || n.text.toLowerCase().includes(search))
+    .map((n, index) => `
+      <div class="note-card">
+        <p><strong>${n.theme}</strong>: ${n.text}</p>
+        <button class="cta-button" onclick="deleteNote(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteNote(index) {
@@ -504,13 +568,16 @@ function deleteNote(index) {
 }
 
 function updateSensitiveFilesList() {
+  const search = document.querySelector('#sensitive-files-search').value.toLowerCase();
   const list = document.querySelector('#sensitive-files-list');
-  list.innerHTML = sensitiveFiles.map((f, index) => `
-    <div class="file-card">
-      <a href="${f.url}" download>${f.name}</a>
-      <button class="cta-button" onclick="deleteSensitiveFile(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = sensitiveFiles
+    .filter(f => f.name.toLowerCase().includes(search))
+    .map((f, index) => `
+      <div class="file-card">
+        <a href="${f.url}" download>${f.name}</a>
+        <button class="cta-button" onclick="deleteSensitiveFile(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteSensitiveFile(index) {
@@ -520,13 +587,16 @@ function deleteSensitiveFile(index) {
 }
 
 function updateInternalDocsList() {
+  const search = document.querySelector('#internal-docs-search').value.toLowerCase();
   const list = document.querySelector('#internal-docs-list');
-  list.innerHTML = internalDocs.map((d, index) => `
-    <div class="file-card">
-      <a href="${d.url}" download>${d.name}</a>
-      <button class="cta-button" onclick="deleteInternalDoc(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = internalDocs
+    .filter(d => d.name.toLowerCase().includes(search))
+    .map((d, index) => `
+      <div class="file-card">
+        <a href="${d.url}" download>${d.name}</a>
+        <button class="cta-button" onclick="deleteInternalDoc(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteInternalDoc(index) {
@@ -536,13 +606,16 @@ function deleteInternalDoc(index) {
 }
 
 function updateSuggestionsList() {
+  const search = document.querySelector('#suggestions-search').value.toLowerCase();
   const list = document.querySelector('#suggestions-list');
-  list.innerHTML = suggestions.map((s, index) => `
-    <div class="suggestion-card">
-      <p><strong>${s.member}</strong>: ${s.text}</p>
-      <button class="cta-button" onclick="deleteSuggestion(${index})">Supprimer</button>
-    </div>
-  `).join('');
+  list.innerHTML = suggestions
+    .filter(s => s.member.toLowerCase().includes(search) || s.text.toLowerCase().includes(search))
+    .map((s, index) => `
+      <div class="suggestion-card">
+        <p><strong>${s.member}</strong>: ${s.text}</p>
+        <button class="cta-button" onclick="deleteSuggestion(${index})">Supprimer</button>
+      </div>
+    `).join('');
 }
 
 function deleteSuggestion(index) {
@@ -552,10 +625,12 @@ function deleteSuggestion(index) {
 }
 
 function updateCoranContent() {
+  const search = document.querySelector('#coran-search').value.toLowerCase();
   const content = document.querySelector('#coran-content');
-  content.innerHTML = Array(30).fill().map((_, i) => `
-    <p style="font-family: 'Amiri', serif; font-size: 1.2rem;">جزء ${i + 1}</p>
-  `).join('');
+  content.innerHTML = Array(30).fill()
+    .map((_, i) => ({ juz: `Juz' ${i + 1}`, id: i + 1 }))
+    .filter(j => j.juz.toLowerCase().includes(search))
+    .map(j => `<p style="font-family: 'Amiri', serif; font-size: 1.2rem;">${j.juz}</p>`).join('');
 }
 
 function updatePersonalInfo() {
@@ -624,9 +699,80 @@ function updateStats() {
   });
 }
 
+function updateCallMembersList() {
+  const search = document.querySelector('#video-calls-search').value.toLowerCase();
+  const list = document.querySelector('#members-call-list');
+  list.innerHTML = members
+    .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
+    .map(m => `
+      <div class="member-card">
+        <input type="checkbox" id="call-${m.code}" value="${m.code}" onchange="updateSelectedCallMembers('${m.code}', this.checked)">
+        <label for="call-${m.code}">${m.firstname} ${m.lastname} (${m.code})</label>
+      </div>
+    `).join('');
+}
+
+function updateSelectedCallMembers(code, checked) {
+  if (checked) {
+    selectedCallMembers.push(code);
+  } else {
+    selectedCallMembers = selectedCallMembers.filter(c => c !== code);
+  }
+}
+
+function initVideoCall() {
+  if (!currentUser || currentUser.role !== 'admin') {
+    document.querySelector('#video-call-container').innerHTML = '<p>Accès réservé aux membres du bureau.</p>';
+    return;
+  }
+  updateCallMembersList();
+  document.querySelector('#video-call-container').innerHTML = '<p>Sélectionnez les membres à appeler ou utilisez "Appeler tout le monde".</p>';
+}
+
+function callAllMembers() {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  selectedCallMembers = members.map(m => m.code);
+  startCall('video');
+}
+
+function startSelectedCall(type) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  if (selectedCallMembers.length === 0) {
+    alert('Veuillez sélectionner au moins un membre.');
+    return;
+  }
+  startCall(type);
+}
+
+function startCall(type) {
+  const roomId = `ansar-room-${Date.now()}`;
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmFwcGVhci5pbiIsImF1ZCI6Imh0dHBzOi8vYXBpLmFwcGVhci5pbi92MSIsImV4cCI6OTAwNzE5OTI1NDc0MDk5MSwiaWF0IjoxNzUyNzQzMzY5LCJvcmdhbml6YXRpb25JZCI6MzIwMzY3LCJqdGkiOiJmYzdmMjhiYS0xZTViLTRhYjAtOGQwZi1kZWNjNzAxYzkyNzAifQ.2WXwlPQj_-Da17X3IXJrVFYfiAsGlxzaRftPiG5oFWI';
+  const videoCallContainer = document.querySelector('#video-call-container');
+  const roomUrl = `https://ansar-almouyassar.whereby.com/${roomId}?token=${token}&${type === 'audio' ? 'audioOnly=true' : ''}&displayName=${currentUser.firstname} ${currentUser.lastname}`;
+  videoCallContainer.innerHTML = `<whereby-embed room="${roomUrl}"></whereby-embed>`;
+  alert(`${type === 'video' ? 'Appel vidéo' : 'Appel audio'} démarré avec ${selectedCallMembers.length} membre(s).`);
+}
+
 function payContribution() {
   window.open('https://wave.com', '_blank');
 }
+
+document.querySelector('#members-search').addEventListener('input', updateMembersList);
+document.querySelector('#contributions-search').addEventListener('input', updateContributionsList);
+document.querySelector('#activities-search').addEventListener('input', updateActivitiesList);
+document.querySelector('#gallery-search').addEventListener('input', updateGalleryContent);
+document.querySelector('#messages-search').addEventListener('input', updateMessagesList);
+document.querySelector('#coran-search').addEventListener('input', updateCoranContent);
+document.querySelector('#edit-member-search').addEventListener('input', updateEditMembersList);
+document.querySelector('#contributions-admin-search').addEventListener('input', updateContributionsAdminList);
+document.querySelector('#gallery-admin-search').addEventListener('input', updateGalleryAdminList);
+document.querySelector('#activities-admin-search').addEventListener('input', updateActivitiesAdminList);
+document.querySelector('#messages-admin-search').addEventListener('input', updateMessagesAdminList);
+document.querySelector('#notes-search').addEventListener('input', updateNotesList);
+document.querySelector('#sensitive-files-search').addEventListener('input', updateSensitiveFilesList);
+document.querySelector('#internal-docs-search').addEventListener('input', updateInternalDocsList);
+document.querySelector('#suggestions-search').addEventListener('input', updateSuggestionsList);
+document.querySelector('#video-calls-search').addEventListener('input', updateCallMembersList);
 
 updateMembersList();
 updateContributionsList();
