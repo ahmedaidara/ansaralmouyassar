@@ -1,9 +1,15 @@
 {
-  "name": "Ansar Al Mouyassar",
-  "short_name": "Ansar",
-  "start_url": "/",
+  "name": "ANSAR ALMOUYASSAR",
+  "short_name": "ANSAR",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#f0f0f0",
-  "theme_color": "#9b9c28",
-  "icons": []
+  "background_color": "#778152",
+  "theme_color": "#3a6241",
+  "icons": [
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
 }
