@@ -38,14 +38,8 @@ body {
   height: 50px;
 }
 
-#language-selector, #settings-language {
-  padding: 0.5rem;
-  border-radius: 5px;
-  background: var(--accent-color);
-  color: var(--text-color);
-}
-
-.theme-toggle {
+.top-nav .material-icons {
+  font-size: 30px;
   cursor: pointer;
 }
 
@@ -78,10 +72,24 @@ main {
   margin: 1rem 0;
 }
 
-#countdown {
+#events-countdown {
   font-size: 1.5rem;
   font-weight: bold;
   margin: 1rem 0;
+}
+
+.message-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-color);
+  border: 2px solid var(--secondary-color);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  max-width: 90%;
 }
 
 .cta-button {
@@ -105,8 +113,9 @@ main {
 }
 
 .bottom-nav {
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  justify-content: center;
   align-items: center;
   padding: 0.5rem;
   background: var(--primary-color);
@@ -115,7 +124,6 @@ main {
   width: 100%;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  flex-wrap: wrap;
 }
 
 .nav-item {
@@ -125,7 +133,6 @@ main {
   flex-direction: column;
   align-items: center;
   font-size: 0.8rem;
-  flex: 1 1 50px;
   padding: 0.5rem;
 }
 
@@ -154,7 +161,8 @@ main {
   bottom: 160px;
   right: 20px;
   width: 300px;
-  background: var(--bg-color);
+  background: var(--bg-color) url('assets/images/chatbot-bg.jpg') no-repeat center center;
+  background-size: contain;
   border: 1px solid var(--secondary-color);
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -194,14 +202,21 @@ main {
   color: white;
 }
 
-#chatbot-form {
+.chatbot-input-container {
   display: flex;
   padding: 0.5rem;
+  align-items: center;
 }
 
 #chatbot-input {
   flex-grow: 1;
   margin-right: 0.5rem;
+}
+
+.chatbot-send {
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 form {
@@ -237,7 +252,7 @@ input, textarea, select {
   border-radius: 10px;
 }
 
-.member-card, .contribution-card, .suggestion-card, .activity-card, .note-card, .file-card {
+.member-card, .contribution-card, .suggestion-card, .event-card, .note-card, .file-card {
   background: var(--bg-color);
   border: 1px solid var(--secondary-color);
   padding: 1rem;
@@ -284,19 +299,41 @@ canvas {
   border-radius: 10px;
 }
 
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.link-button {
+  display: block;
+  padding: 1rem;
+  background: var(--accent-color);
+  color: white;
+  text-align: center;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+
+.link-button:hover {
+  transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
   main {
     padding: 0.5rem;
   }
 
   .bottom-nav {
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.3rem;
     padding: 0.3rem;
   }
 
   .nav-item {
     font-size: 0.7rem;
-    flex: 1 1 40px;
   }
 
   .chatbot-container {
