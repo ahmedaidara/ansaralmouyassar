@@ -108,25 +108,12 @@ document.querySelector('#login-form').addEventListener('submit', (e) => {
   const password = document.querySelector('#password').value;
   const errorMessage = document.querySelector('#error-message');
 
-  const dateRegex = /^(0[1-9]|[12][0-9]|3[01])(0[1-9]|1[012])(19|20)\d\d$/;
-  if (!dateRegex.test(password)) {
-    errorMessage.textContent = 'Mot de passe invalide (format : JJMMAAAA)';
-    errorMessage.style.display = 'block';
-    return;
-  }
-
   if (code === 'ADMIN123' && password === '01012000') {
     currentUser = { code: 'ADMIN123', role: 'admin' };
     showPage('secret');
   } else {
-    const member = members.find(m => m.code === code && m.dob === password);
-    if (member) {
-      currentUser = member;
-      showPage('personal');
-    } else {
-      errorMessage.textContent = 'Code ou mot de passe incorrect';
-      errorMessage.style.display = 'block';
-    }
+    errorMessage.textContent = 'Code ou mot de passe incorrect';
+    errorMessage.style.display = 'block';
   }
 });
 
@@ -178,6 +165,7 @@ document.querySelector('#add-member-form').addEventListener('submit', (e) => {
     contributions: contributions.map(c => ({ name: c.name, amount: c.amount, paid: c.name === 'Mensuelle' ? [false, false, false] : false, partial: 0 }))
   };
   members.push(member);
+  document.querySelector('#add-member-form').reset();
   updateMembersList();
   updateEditMembersList();
   updateStats();
@@ -208,6 +196,7 @@ document.querySelector('#add-contribution-form').addEventListener('submit', (e) 
   const amount = parseInt(document.querySelector('#contribution-amount').value);
   contributions.push({ name, amount });
   members.forEach(member => member.contributions.push({ name, amount, paid: name === 'Mensuelle' ? [false, false, false] : false, partial: 0 }));
+  document.querySelector('#add-contribution-form').reset();
   updateContributionsList();
   updateContributionsAdminList();
   updatePersonalInfo();
@@ -219,6 +208,7 @@ document.querySelector('#suggestion-form').addEventListener('submit', (e) => {
   if (!currentUser) return;
   const text = document.querySelector('#suggestion-text').value;
   suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text });
+  document.querySelector('#suggestion-form').reset();
   updateSuggestionsList();
 });
 
@@ -228,6 +218,7 @@ document.querySelector('#add-gallery-form').addEventListener('submit', (e) => {
   const file = document.querySelector('#gallery-file').files[0];
   if (file) {
     gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url: URL.createObjectURL(file) });
+    document.querySelector('#add-gallery-form').reset();
     updateGalleryContent();
     updateGalleryAdminList();
   }
@@ -243,6 +234,7 @@ document.querySelector('#add-activity-form').addEventListener('submit', (e) => {
     date: new Date().toISOString()
   };
   activities.push(activity);
+  document.querySelector('#add-activity-form').reset();
   updateActivitiesList();
   updateActivitiesAdminList();
 });
@@ -252,6 +244,7 @@ document.querySelector('#add-message-form').addEventListener('submit', (e) => {
   if (!currentUser || currentUser.role !== 'admin') return;
   const text = document.querySelector('#message-text').value;
   messages.push({ text, date: new Date().toISOString() });
+  document.querySelector('#add-message-form').reset();
   updateMessagesList();
   updateMessagesAdminList();
 });
@@ -262,6 +255,7 @@ document.querySelector('#add-note-form').addEventListener('submit', (e) => {
   const theme = document.querySelector('#note-theme').value;
   const text = document.querySelector('#note-text').value;
   notes.push({ theme, text });
+  document.querySelector('#add-note-form').reset();
   updateNotesList();
 });
 
@@ -282,6 +276,7 @@ document.querySelector('#add-sensitive-file-form').addEventListener('submit', (e
   const file = document.querySelector('#sensitive-file').files[0];
   if (file) {
     sensitiveFiles.push({ name: file.name, url: URL.createObjectURL(file) });
+    document.querySelector('#add-sensitive-file-form').reset();
     updateSensitiveFilesList();
   }
 });
@@ -292,6 +287,7 @@ document.querySelector('#add-internal-doc-form').addEventListener('submit', (e) 
   const file = document.querySelector('#internal-doc').files[0];
   if (file) {
     internalDocs.push({ name: file.name, url: URL.createObjectURL(file) });
+    document.querySelector('#add-internal-doc-form').reset();
     updateInternalDocsList();
   }
 });
@@ -300,19 +296,8 @@ function updateMembersList() {
   const list = document.querySelector('#members-list');
   list.innerHTML = members.map(m => `
     <div class="member-card">
-      <img src="${m.photo}" alt="${m.firstname} ${m.lastname}" style="width: 100px; border-radius: 50%;">
-      <p><strong>Prénom :</strong> ${m.firstname}</p>
-      <p><strong>Nom :</strong> ${m.lastname}</p>
-      <p><strong>Âge :</strong> ${m.age}</p>
-      <p><strong>Date de naissance :</strong> ${m.dob}</p>
-      <p><strong>Lieu de naissance :</strong> ${m.birthplace}</p>
-      <p><strong>Email :</strong> ${m.email}</p>
-      <p><strong>Activité :</strong> ${m.activity}</p>
-      <p><strong>Adresse :</strong> ${m.address}</p>
-      <p><strong>Téléphone :</strong> ${m.phone}</p>
-      <p><strong>Résidence :</strong> ${m.residence}</p>
-      <p><strong>Rôle :</strong> ${m.role}</p>
-      <p><strong>Statut :</strong> ${m.status}</p>
+      <p><strong>${m.firstname} ${m.lastname}</strong></p>
+      <p><strong>Numéro :</strong> ${m.code}</p>
     </div>
   `).join('');
 }
@@ -414,18 +399,8 @@ function editMember(code) {
 
 function deleteMember(code) {
   if (!currentUser || currentUser.role !== 'admin') return;
-  if (currentUser.role !== 'president') {
-    document.querySelector('#delete-member-form').dataset.memberCode = code;
-    document.querySelector('#delete-member-form').style.display = 'block';
-  } else {
-    const index = members.findIndex(m => m.code === code);
-    if (index !== -1) {
-      members.splice(index, 1);
-      updateMembersList();
-      updateEditMembersList();
-      updateStats();
-    }
-  }
+  document.querySelector('#delete-member-form').dataset.memberCode = code;
+  document.querySelector('#delete-member-form').style.display = 'block';
 }
 
 function updateActivitiesList() {
@@ -441,13 +416,21 @@ function updateActivitiesList() {
 
 function updateActivitiesAdminList() {
   const list = document.querySelector('#activities-admin-list');
-  list.innerHTML = activities.map(a => `
+  list.innerHTML = activities.map((a, index) => `
     <div class="activity-card">
       <h4>${a.name}</h4>
       <p>${a.description}</p>
       ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
+      <button class="cta-button" onclick="deleteActivity(${index})">Supprimer</button>
     </div>
   `).join('');
+}
+
+function deleteActivity(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  activities.splice(index, 1);
+  updateActivitiesList();
+  updateActivitiesAdminList();
 }
 
 function updateGalleryContent() {
@@ -461,11 +444,19 @@ function updateGalleryContent() {
 
 function updateGalleryAdminList() {
   const list = document.querySelector('#gallery-admin-list');
-  list.innerHTML = gallery.map(g => `
+  list.innerHTML = gallery.map((g, index) => `
     <div>
       ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie" style="max-width: 100%; border-radius: 10px;">` : `<video src="${g.url}" controls style="max-width: 100%; border-radius: 10px;"></video>`}
+      <button class="cta-button" onclick="deleteGalleryItem(${index})">Supprimer</button>
     </div>
   `).join('');
+}
+
+function deleteGalleryItem(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  gallery.splice(index, 1);
+  updateGalleryContent();
+  updateGalleryAdminList();
 }
 
 function updateMessagesList() {
@@ -480,39 +471,68 @@ function updateMessagesList() {
 
 function updateMessagesAdminList() {
   const list = document.querySelector('#messages-admin-list');
-  list.innerHTML = messages.map(m => `
+  list.innerHTML = messages.map((m, index) => `
     <div class="message-card">
       <p>${m.text}</p>
       <p><small>${new Date(m.date).toLocaleString()}</small></p>
+      <button class="cta-button" onclick="deleteMessage(${index})">Supprimer</button>
     </div>
   `).join('');
+}
+
+function deleteMessage(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  messages.splice(index, 1);
+  updateMessagesList();
+  updateMessagesAdminList();
 }
 
 function updateNotesList() {
   const list = document.querySelector('#notes-list');
-  list.innerHTML = notes.map(n => `
+  list.innerHTML = notes.map((n, index) => `
     <div class="note-card">
       <p><strong>${n.theme}</strong>: ${n.text}</p>
+      <button class="cta-button" onclick="deleteNote(${index})">Supprimer</button>
     </div>
   `).join('');
+}
+
+function deleteNote(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  notes.splice(index, 1);
+  updateNotesList();
 }
 
 function updateSensitiveFilesList() {
   const list = document.querySelector('#sensitive-files-list');
-  list.innerHTML = sensitiveFiles.map(f => `
+  list.innerHTML = sensitiveFiles.map((f, index) => `
     <div class="file-card">
       <a href="${f.url}" download>${f.name}</a>
+      <button class="cta-button" onclick="deleteSensitiveFile(${index})">Supprimer</button>
     </div>
   `).join('');
 }
 
+function deleteSensitiveFile(index) {
+  if (!currentUser || currentUser.role !== 'president') return;
+  sensitiveFiles.splice(index, 1);
+  updateSensitiveFilesList();
+}
+
 function updateInternalDocsList() {
   const list = document.querySelector('#internal-docs-list');
-  list.innerHTML = internalDocs.map(d => `
+  list.innerHTML = internalDocs.map((d, index) => `
     <div class="file-card">
       <a href="${d.url}" download>${d.name}</a>
+      <button class="cta-button" onclick="deleteInternalDoc(${index})">Supprimer</button>
     </div>
   `).join('');
+}
+
+function deleteInternalDoc(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  internalDocs.splice(index, 1);
+  updateInternalDocsList();
 }
 
 function updateSuggestionsList() {
@@ -606,14 +626,6 @@ function updateStats() {
 
 function payContribution() {
   window.open('https://wave.com', '_blank');
-}
-
-function startCall(type) {
-  alert(`Lancement d'un appel ${type === 'group' ? 'de groupe' : 'individuel'} (WebRTC à implémenter)`);
-}
-
-function startLive() {
-  alert('Lancement d’un live (WebRTC à implémenter)');
 }
 
 updateMembersList();
