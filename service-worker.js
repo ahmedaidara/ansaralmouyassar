@@ -6,6 +6,7 @@ self.addEventListener('install', (event) => {
         '/index.html',
         '/main.css',
         '/main.js',
+        '/chatbotResponses.js',
         '/assets/images/logo.png',
         '/assets/videos/intro.mp4'
       ]);
