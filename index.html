@@ -10,6 +10,8 @@
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/@whereby.com/browser-sdk"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js"></script>
 </head>
 <body>
   <header>
@@ -19,7 +21,6 @@
     </nav>
   </header>
   <main>
-    <!-- Page d'accueil -->
     <section id="home" class="page active">
       <div class="hero">
         <h1>ANSAR ALMOUYASSAR</h1>
@@ -32,48 +33,34 @@
         <div id="message-popups"></div>
       </div>
     </section>
-
-    <!-- Page des membres (publique) -->
     <section id="members" class="page">
       <h2>Liste des Membres</h2>
       <input type="text" id="members-search" placeholder="Rechercher un membre..." class="search-bar">
       <div id="members-list"></div>
     </section>
-
-    <!-- Page des événements -->
     <section id="events" class="page">
       <h2>Événements à venir</h2>
       <input type="text" id="events-search" placeholder="Rechercher un événement..." class="search-bar">
       <div id="events-list"></div>
     </section>
-
-    <!-- Page de la galerie -->
     <section id="gallery" class="page">
       <h2>Galerie</h2>
       <div id="gallery-content" class="gallery-grid"></div>
     </section>
-
-    <!-- Page des messages -->
     <section id="messages" class="page">
       <h2>Messages</h2>
       <div id="messages-list"></div>
     </section>
-
-    <!-- Page Coran -->
     <section id="coran" class="page">
       <h2>Coran - 30 Juz'</h2>
       <input type="text" id="coran-search" placeholder="Rechercher un juz..." class="search-bar">
       <div id="coran-content"></div>
     </section>
-
-    <!-- Page Bibliothèque -->
     <section id="library" class="page">
       <h2>Bibliothèque</h2>
       <input type="text" id="library-search" placeholder="Rechercher un livre..." class="search-bar">
       <div id="library-content"></div>
     </section>
-
-    <!-- Espace personnel -->
     <section id="personal" class="page">
       <div id="personal-login" style="display: block;">
         <h2>Espace Personnel</h2>
@@ -91,7 +78,8 @@
         <div id="personal-info"></div>
         <h3>Mes Cotisations</h3>
         <div id="personal-contributions"></div>
-        <button class="cta-button" onclick="payContribution()">Payer via Wave/Orange Money</button>
+        <button class="cta-button" onclick="payWithWave()">Payer via Wave</button>
+        <button class="cta-button" onclick="payWithOrangeMoney()">Payer via Orange Money</button>
         <h3>Suggestions</h3>
         <form id="suggestion-form">
           <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
@@ -100,11 +88,9 @@
         <button class="cta-button logout-button" onclick="logoutPersonal()">Se déconnecter</button>
       </div>
     </section>
-
-    <!-- Espace secret -->
     <section id="secret" class="page">
       <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
-      <h2>Espace Secret</h2>
+      <h2>Espace Secret - Administration</h2>
       <div class="tabs">
         <button class="tab-button active" onclick="showTab('add-member')">Ajouter un Membre</button>
         <button class="tab-button" onclick="showTab('edit-member')">Modifier un Membre</button>
@@ -117,9 +103,6 @@
         <button class="tab-button" onclick="showTab('stats')">Statistiques</button>
         <button class="tab-button" onclick="showTab('video-calls')">Appels</button>
         <button class="tab-button" onclick="showTab('auto-messages')">Messages Automatisés</button>
-        <button class="tab-button" onclick="showTab('treasurer')">Cotisations (Trésorier)</button>
-        <button class="tab-button" onclick="showTab('president')">Fichiers Présidentiels</button>
-        <button class="tab-button" onclick="showTab('secretary')">Fichiers Secrétaire</button>
       </div>
       <div id="add-member" class="tab-content active">
         <h3>Ajouter un Membre</h3>
@@ -244,18 +227,32 @@
         <input type="text" id="auto-messages-search" placeholder="Rechercher un message automatisé..." class="search-bar">
         <div id="auto-messages-list"></div>
       </div>
-      <div id="treasurer" class="tab-content">
-        <h3>Gestion des Cotisations (Trésorier)</h3>
+    </section>
+    <section id="treasurer-secret" class="page">
+      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
+      <h2>Espace Secret - Trésorier</h2>
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('treasurer-contributions')">Gestion des Cotisations</button>
+      </div>
+      <div id="treasurer-contributions" class="tab-content active">
+        <h3>Gestion des Cotisations</h3>
         <form id="add-contribution-form">
           <input type="text" id="contribution-name" placeholder="Nom (ex. : Journée de visite)" required>
           <input type="number" id="contribution-amount" placeholder="Montant (FCFA)" required>
           <button type="submit" class="cta-button">Ajouter Cotisation</button>
         </form>
-        <h3>Marquer les Paiements</h3>
         <input type="text" id="contributions-admin-search" placeholder="Rechercher une cotisation..." class="search-bar">
         <div id="contributions-admin-list"></div>
       </div>
-      <div id="president" class="tab-content">
+    </section>
+    <section id="president-secret" class="page">
+      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
+      <h2>Espace Secret - Président</h2>
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('president-files')">Fichiers Présidentiels</button>
+        <button class="tab-button" onclick="showTab('president-notes')">Notes</button>
+      </div>
+      <div id="president-files" class="tab-content active">
         <h3>Fichiers Présidentiels</h3>
         <form id="add-president-file-form">
           <input type="text" id="president-file-category" placeholder="Catégorie" required>
@@ -265,7 +262,25 @@
         <input type="text" id="president-files-search" placeholder="Rechercher un fichier..." class="search-bar">
         <div id="president-files-list"></div>
       </div>
-      <div id="secretary" class="tab-content">
+      <div id="president-notes" class="tab-content">
+        <h3>Notes</h3>
+        <form id="add-president-note-form">
+          <input type="text" id="president-note-theme" placeholder="Thème (ex. : Réunion)" required>
+          <textarea id="president-note-text" placeholder="Contenu de la note" required></textarea>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <input type="text" id="president-notes-search" placeholder="Rechercher une note..." class="search-bar">
+        <div id="president-notes-list"></div>
+      </div>
+    </section>
+    <section id="secretary-secret" class="page">
+      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
+      <h2>Espace Secret - Secrétaire</h2>
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('secretary-files')">Fichiers Secrétaire</button>
+        <button class="tab-button" onclick="showTab('secretary-notes')">Notes</button>
+      </div>
+      <div id="secretary-files" class="tab-content active">
         <h3>Fichiers Secrétaire</h3>
         <form id="add-secretary-file-form">
           <input type="text" id="secretary-file-category" placeholder="Catégorie" required>
@@ -275,9 +290,17 @@
         <input type="text" id="secretary-files-search" placeholder="Rechercher un fichier..." class="search-bar">
         <div id="secretary-files-list"></div>
       </div>
+      <div id="secretary-notes" class="tab-content">
+        <h3>Notes</h3>
+        <form id="add-secretary-note-form">
+          <input type="text" id="secretary-note-theme" placeholder="Thème (ex. : Réunion)" required>
+          <textarea id="secretary-note-text" placeholder="Contenu de la note" required></textarea>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <input type="text" id="secretary-notes-search" placeholder="Rechercher une note..." class="search-bar">
+        <div id="secretary-notes-list"></div>
+      </div>
     </section>
-
-    <!-- Page des paramètres -->
     <section id="settings" class="page">
       <h2>Paramètres</h2>
       <label>Mode sombre/clair</label>
@@ -318,6 +341,7 @@
       <span class="material-icons" onclick="toggleChatbot()">close</span>
     </div>
     <div id="chatbot-messages"></div>
+    <button class="cta-button clear-history" onclick="clearChatHistory()"><span class="material-icons">delete</span> Effacer l'historique</button>
     <form id="chatbot-form">
       <input type="text" id="chatbot-input" placeholder="Posez une question...">
       <button type="submit" class="cta-button"><span class="material-icons">send</span></button>
