@@ -1,7 +1,7 @@
 let currentUser = null;
-const members = [
+let members = JSON.parse(localStorage.getItem('members')) || [
   {
-    code: 'MEMBRE001',
+    code: '001',
     firstname: 'Mouhamed',
     lastname: 'Niang',
     age: 45,
@@ -15,21 +15,54 @@ const members = [
     residence: 'Dakar',
     role: 'president',
     status: 'actif',
-    contributions: [{ name: 'Mensuelle', amount: 2000, paid: [true, false, false], partial: 0 }]
+    contributions: [
+      { name: 'Mensuelle', amount: 2000, years: { '2023': [false, false, false, false, false, false, false, false, false, false, false, false], '2024': [false, false, false, false, false, false, false, false, false, false, false, false], '2025': [false, false, false, false, false, false, false, false, false, false, false, false] } }
+    ]
   }
 ];
-const contributions = [{ name: 'Mensuelle', amount: 2000 }];
-const suggestions = [];
-const gallery = [];
-const activities = [{ name: 'Conférence Annuelle', description: 'Conférence 2025', image: 'assets/images/conference.jpg', date: '2025-08-02T15:00:00' }];
-const messages = [];
-const notes = [];
-const sensitiveFiles = [];
-const internalDocs = [];
-const sensitiveFilesPassword = '0000';
-const presidentCode = '0000';
+let contributions = JSON.parse(localStorage.getItem('contributions')) || [
+  { name: 'Mensuelle', amount: 2000, years: ['2023', '2024', '2025'] }
+];
+let suggestions = JSON.parse(localStorage.getItem('suggestions')) || [];
+let gallery = JSON.parse(localStorage.getItem('gallery')) || [];
+let events = JSON.parse(localStorage.getItem('events')) || [];
+let messages = JSON.parse(localStorage.getItem('messages')) || [];
+let autoMessages = JSON.parse(localStorage.getItem('autoMessages')) || [];
+let notes = JSON.parse(localStorage.getItem('notes')) || [];
+let internalDocs = JSON.parse(localStorage.getItem('internalDocs')) || [];
+let presidentFiles = JSON.parse(localStorage.getItem('presidentFiles')) || [];
+let secretaryFiles = JSON.parse(localStorage.getItem('secretaryFiles')) || [];
+let library = JSON.parse(localStorage.getItem('library')) || [
+  { category: 'Fikhs', name: 'Livre de Fikh 1', url: 'assets/books/fikh1.pdf' },
+  { category: 'Hadis', name: 'Sahih Bukhari', url: 'assets/books/hadis1.pdf' },
+  { category: 'Langue', name: 'Apprendre l\'Arabe', url: 'assets/books/langue1.pdf' }
+];
 let isChatOpen = false;
 let selectedCallMembers = [];
+const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const presidentCode = '0000';
+const validCodes = {
+  admin: ['JESUISMEMBRE66', '33333333', '44444444', '55555555'],
+  tresorier: ['JESUISTRESORIER444', '66666666', '77777777', '88888888'],
+  president: ['PRESIDENT000', '99999999', '11112222', '33334444'],
+  secretaire: ['SECRETAIRE000', '55556666', '77778888', '99990000'],
+  secretEntry: ['ADMIN12301012000', '00000000', '11111111', '22222222']
+};
+
+function saveData() {
+  localStorage.setItem('members', JSON.stringify(members));
+  localStorage.setItem('contributions', JSON.stringify(contributions));
+  localStorage.setItem('suggestions', JSON.stringify(suggestions));
+  localStorage.setItem('gallery', JSON.stringify(gallery));
+  localStorage.setItem('events', JSON.stringify(events));
+  localStorage.setItem('messages', JSON.stringify(messages));
+  localStorage.setItem('autoMessages', JSON.stringify(autoMessages));
+  localStorage.setItem('notes', JSON.stringify(notes));
+  localStorage.setItem('internalDocs', JSON.stringify(internalDocs));
+  localStorage.setItem('presidentFiles', JSON.stringify(presidentFiles));
+  localStorage.setItem('secretaryFiles', JSON.stringify(secretaryFiles));
+  localStorage.setItem('library', JSON.stringify(library));
+}
 
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
@@ -37,16 +70,18 @@ function showPage(pageId) {
   document.querySelector(`#${pageId}`).classList.add('active');
   document.querySelector(`a[onclick="showPage('${pageId}')"]`).classList.add('active');
   if (pageId === 'members') updateMembersList();
-  if (pageId === 'contributions') updateContributionsList();
-  if (pageId === 'activities') updateActivitiesList();
+  if (pageId === 'events') updateEventsList();
   if (pageId === 'gallery') updateGalleryContent();
   if (pageId === 'messages') updateMessagesList();
   if (pageId === 'coran') updateCoranContent();
+  if (pageId === 'library') updateLibraryContent();
   if (pageId === 'personal') {
-    document.querySelector('#personal-login').style.display = currentUser && currentUser.role !== 'admin' ? 'none' : 'block';
-    document.querySelector('#personal-content').style.display = currentUser && currentUser.role !== 'admin' ? 'block' : 'none';
-    if (currentUser && currentUser.role !== 'admin') updatePersonalInfo();
+    document.querySelector('#personal-login').style.display = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire' ? 'none' : 'block';
+    document.querySelector('#personal-content').style.display = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire' ? 'block' : 'none';
+    if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire') updatePersonalInfo();
   }
+  if (pageId === 'president') updatePresidentFilesList();
+  if (pageId === 'secretary') updateSecretaryFilesList();
 }
 
 function showTab(tabId) {
@@ -55,54 +90,101 @@ function showTab(tabId) {
   document.querySelector(`#${tabId}`).classList.add('active');
   document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
   if (tabId === 'edit-member') updateEditMembersList();
-  if (tabId === 'contributions-admin') updateContributionsAdminList();
   if (tabId === 'gallery-admin') updateGalleryAdminList();
-  if (tabId === 'activities-admin') updateActivitiesAdminList();
+  if (tabId === 'events-admin') updateEventsAdminList();
   if (tabId === 'messages-admin') updateMessagesAdminList();
-  if (tabId === 'suggestions-admin') updateSuggestionsList();
+  if (tabId === 'auto-messages') updateAutoMessagesList();
   if (tabId === 'notes') updateNotesList();
-  if (tabId === 'sensitive-files') document.querySelector('#sensitive-files-content').style.display = 'none';
   if (tabId === 'internal-docs') updateInternalDocsList();
+  if (tabId === 'suggestions-admin') updateSuggestionsList();
   if (tabId === 'stats') updateStats();
-  if (tabId === 'video-calls') initVideoCall();
+  if (tabId === 'video-calls') updateCallMembersList();
+}
+
+function showTreasurerTab(tabId) {
+  document.querySelectorAll('#treasurer .tab-content').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('#treasurer .tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`#${tabId}`).classList.add('active');
+  document.querySelector(`button[onclick="showTreasurerTab('${tabId}')"]`).classList.add('active');
+  if (tabId === 'manage-contributions') updateContributionsTreasurerList();
 }
 
 function toggleTheme() {
   document.body.classList.toggle('dark-mode');
 }
 
-function updateCountdown() {
-  const eventDate = new Date(activities[0].date);
-  const now = new Date();
-  const diff = eventDate - now;
-  if (diff <= 0) {
-    document.getElementById('countdown').textContent = 'Événement en cours !';
-    return;
-  }
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  document.getElementById('countdown').textContent = `JOUR J - ${days} jours ${hours}h ${minutes}m ${seconds}s`;
+function updateEventsCountdown() {
+  const countdownDiv = document.getElementById('events-countdown');
+  countdownDiv.innerHTML = '';
+  events.forEach(event => {
+    const eventDate = new Date(`${event.date}T${event.time}`);
+    const now = new Date();
+    const diff = eventDate - now;
+    let text = '';
+    if (diff <= 0 && diff > -30 * 60 * 1000) {
+      text = `Événement "${event.name}" : EN COURS`;
+    } else if (diff > 0) {
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      text = `Événement "${event.name}" : JOUR J - ${days} jours ${hours}h ${minutes}m ${seconds}s`;
+    }
+    if (text) {
+      countdownDiv.innerHTML += `<div>${text}</div>`;
+    }
+  });
+  if (!events.length) countdownDiv.innerHTML = '';
 }
 
-setInterval(updateCountdown, 1000);
+function checkAutoMessages() {
+  const now = new Date();
+  autoMessages.forEach((msg, index) => {
+    const msgDate = new Date(`${msg.date}T${msg.time}`);
+    if (now >= msgDate && !msg.sent) {
+      messages.push({ title: msg.name, text: msg.text, date: now.toISOString() });
+      msg.sent = true;
+      showMessagePopup(msg.name, msg.text);
+      sendNotification(msg.name, msg.text);
+      updateMessagesList();
+      updateMessagesAdminList();
+      saveData();
+    }
+  });
+}
 
-document.querySelector('.theme-toggle').addEventListener('click', toggleTheme);
+setInterval(() => {
+  updateEventsCountdown();
+  checkAutoMessages();
+  updateContributionsYears();
+}, 1000);
 
-document.querySelector('#language-selector').addEventListener('change', (e) => {
-  const lang = e.target.value;
-  document.querySelector('#settings-language').value = lang;
-});
+function showMessagePopup(title, content) {
+  document.getElementById('message-popup-title').textContent = title;
+  document.getElementById('message-popup-content').textContent = content;
+  document.getElementById('message-popup').style.display = 'block';
+}
 
-document.querySelector('#settings-language').addEventListener('change', (e) => {
-  const lang = e.target.value;
-  document.querySelector('#language-selector').value = lang;
-});
+function closeMessagePopup() {
+  document.getElementById('message-popup').style.display = 'none';
+}
+
+function sendNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, { body });
+      }
+    });
+  }
+}
 
 function toggleChatbot() {
   isChatOpen = !isChatOpen;
   document.querySelector('#chatbot').style.display = isChatOpen ? 'block' : 'none';
+  document.querySelector('#secret-entry').style.display = 'none';
   if (isChatOpen) {
     document.querySelector('#chatbot-messages').innerHTML = '<div class="chatbot-message received">Bienvenue ! Posez une question ou utilisez un mot-clé comme "association", "membre", "cotisation", etc.</div>';
   }
@@ -113,11 +195,11 @@ document.querySelector('.chatbot-button').addEventListener('click', toggleChatbo
 document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = document.querySelector('#chatbot-input');
-  const message = input.value;
+  const message = input.value.trim();
   if (!message) return;
   const messages = document.querySelector('#chatbot-messages');
   messages.innerHTML += `<div class="chatbot-message sent">${message}</div>`;
-  if (message === 'ADMIN12301012000') {
+  if (validCodes.secretEntry.includes(message)) {
     document.querySelector('#secret-entry').style.display = 'block';
   } else {
     const response = getChatbotResponse(message);
@@ -129,10 +211,15 @@ document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
 
 function enterSecret() {
   const password = document.querySelector('#secret-password').value;
-  if (password === 'JESUISMEMBRE66') {
-    currentUser = { code: 'ADMIN123', role: 'admin' };
-    showPage('secret');
+  let role = null;
+  if (validCodes.admin.includes(password)) role = 'admin';
+  else if (validCodes.tresorier.includes(password)) role = 'tresorier';
+  else if (validCodes.president.includes(password)) role = 'president';
+  else if (validCodes.secretaire.includes(password)) role = 'secretaire';
+  if (role) {
+    currentUser = { code: 'ADMIN123', role };
     toggleChatbot();
+    showPage(role === 'tresorier' ? 'treasurer' : role === 'president' ? 'president' : role === 'secretaire' ? 'secretary' : 'secret');
   } else {
     document.querySelector('#chatbot-messages').innerHTML += '<div class="chatbot-message received">Mot de passe incorrect.</div>';
   }
@@ -140,7 +227,6 @@ function enterSecret() {
 
 document.querySelector('#personal-login-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const firstnameLastname = document.querySelector('#personal-firstname-lastname').value;
   const code = document.querySelector('#personal-member-code').value;
   const password = document.querySelector('#personal-password').value;
   const errorMessage = document.querySelector('#personal-error-message');
@@ -152,7 +238,7 @@ document.querySelector('#personal-login-form').addEventListener('submit', (e) =>
     return;
   }
 
-  const member = members.find(m => `${m.firstname} ${m.lastname}` === firstnameLastname && m.code === code && m.dob === password);
+  const member = members.find(m => m.code === code && m.dob === password);
   if (member) {
     currentUser = member;
     document.querySelector('#personal-title').textContent = `Espace de ${member.firstname} ${member.lastname}`;
@@ -160,7 +246,7 @@ document.querySelector('#personal-login-form').addEventListener('submit', (e) =>
     document.querySelector('#personal-content').style.display = 'block';
     updatePersonalInfo();
   } else {
-    errorMessage.textContent = 'Informations incorrectes';
+    errorMessage.textContent = 'Numéro de membre ou mot de passe incorrect';
     errorMessage.style.display = 'block';
   }
 });
@@ -176,28 +262,36 @@ document.querySelector('#add-member-form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const member = {
-    code: `MEMBRE${(members.length + 1).toString().padStart(3, '0')}`,
+    code: String(members.length + 1).padStart(3, '0'),
     firstname: document.querySelector('#new-member-firstname').value,
     lastname: document.querySelector('#new-member-lastname').value,
-    age: parseInt(document.querySelector('#new-member-age').value),
-    dob: document.querySelector('#new-member-dob').value,
-    birthplace: document.querySelector('#new-member-birthplace').value,
+    age: parseInt(document.querySelector('#new-member-age').value) || null,
+    dob: document.querySelector('#new-member-dob').value || null,
+    birthplace: document.querySelector('#new-member-birthplace').value || null,
     photo: document.querySelector('#new-member-photo').files[0] ? URL.createObjectURL(document.querySelector('#new-member-photo').files[0]) : 'assets/images/default-photo.png',
-    email: document.querySelector('#new-member-email').value,
-    activity: document.querySelector('#new-member-activity').value,
-    address: document.querySelector('#new-member-address').value,
-    phone: document.querySelector('#new-member-phone').value,
-    residence: document.querySelector('#new-member-residence').value,
-    role: document.querySelector('#new-member-role').value,
-    status: document.querySelector('#new-member-status').value,
-    contributions: contributions.map(c => ({ name: c.name, amount: c.amount, paid: c.name === 'Mensuelle' ? [false, false, false] : false, partial: 0 }))
+    email: document.querySelector('#new-member-email').value || null,
+    activity: document.querySelector('#new-member-activity').value || null,
+    address: document.querySelector('#new-member-address').value || null,
+    phone: document.querySelector('#new-member-phone').value || null,
+    residence: document.querySelector('#new-member-residence').value || null,
+    role: document.querySelector('#new-member-role').value || 'membre',
+    status: document.querySelector('#new-member-status').value || 'actif',
+    contributions: contributions.map(c => ({
+      name: c.name,
+      amount: c.amount,
+      years: c.years.reduce((acc, year) => ({ ...acc, [year]: Array(12).fill(false) }), {}),
+      paid: false,
+      partial: 0
+    }))
   };
   members.push(member);
   document.querySelector('#add-member-form').reset();
   updateMembersList();
   updateEditMembersList();
   updateCallMembersList();
+  updateContributionsTreasurerList();
   updateStats();
+  saveData();
 });
 
 document.querySelector('#delete-member-form').addEventListener('submit', (e) => {
@@ -214,32 +308,77 @@ document.querySelector('#delete-member-form').addEventListener('submit', (e) => 
     updateMembersList();
     updateEditMembersList();
     updateCallMembersList();
+    updateContributionsTreasurerList();
     updateStats();
     document.querySelector('#delete-member-form').style.display = 'none';
+    saveData();
   }
 });
 
 document.querySelector('#add-contribution-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!currentUser || currentUser.role !== 'admin') return;
+  if (!currentUser || currentUser.role !== 'tresorier') return;
   const name = document.querySelector('#contribution-name').value;
   const amount = parseInt(document.querySelector('#contribution-amount').value);
-  contributions.push({ name, amount });
-  members.forEach(member => member.contributions.push({ name, amount, paid: name === 'Mensuelle' ? [false, false, false] : false, partial: 0 }));
+  const years = name === 'Mensuelle' ? contributions.find(c => c.name === 'Mensuelle')?.years || ['2023', '2024', '2025'] : [];
+  contributions.push({ name, amount, years });
+  members.forEach(member => {
+    member.contributions.push({
+      name,
+      amount,
+      years: name === 'Mensuelle' ? years.reduce((acc, year) => ({ ...acc, [year]: Array(12).fill(false) }), {}),
+      paid: false,
+      partial: 0
+    });
+  });
   document.querySelector('#add-contribution-form').reset();
-  updateContributionsList();
-  updateContributionsAdminList();
+  updateContributionsTreasurerList();
   updatePersonalInfo();
   updateStats();
+  saveData();
 });
+
+function updateContributionsYears() {
+  const currentYear = new Date().getFullYear().toString();
+  if (!contributions.find(c => c.name === 'Mensuelle')?.years.includes(currentYear)) {
+    contributions.find(c => c.name === 'Mensuelle')?.years.push(currentYear);
+    members.forEach(member => {
+      const monthlyCont = member.contributions.find(c => c.name === 'Mensuelle');
+      if (monthlyCont) monthlyCont.years[currentYear] = Array(12).fill(false);
+    });
+    saveData();
+  }
+}
+
+function payContribution() {
+  const waveLink = 'https://pay.wave.com/m/M_sn_dyIw8DZWV46K/c/sn/?amount=2000';
+  const orangeMoneyLink = 'https://sugu.orange-sonatel.com/mp/dc3PQ0eEeSdcKQWVvcTH2Z';
+  const paymentWindow = window.open('', '_blank');
+  paymentWindow.document.write(`
+    <html>
+      <head><title>Paiement des Cotisations</title></head>
+      <body>
+        <h2>Choisir une méthode de paiement</h2>
+        <a href="${waveLink}" target="_blank" class="link-button">Payer via Wave</a>
+        <a href="${orangeMoneyLink}" target="_blank" class="link-button">Payer via Orange Money</a>
+        <style>
+          body { font-family: 'Roboto', sans-serif; text-align: center; padding: 20px; }
+          .link-button { display: block; margin: 10px; padding: 10px; background: #9b9c28; color: white; text-decoration: none; border-radius: 5px; }
+          .link-button:hover { background: #778152; }
+        </style>
+      </body>
+    </html>
+  `);
+}
 
 document.querySelector('#suggestion-form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!currentUser) return;
   const text = document.querySelector('#suggestion-text').value;
-  suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text });
+  suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text, date: new Date().toISOString() });
   document.querySelector('#suggestion-form').reset();
   updateSuggestionsList();
+  saveData();
 });
 
 document.querySelector('#add-gallery-form').addEventListener('submit', (e) => {
@@ -251,32 +390,56 @@ document.querySelector('#add-gallery-form').addEventListener('submit', (e) => {
     document.querySelector('#add-gallery-form').reset();
     updateGalleryContent();
     updateGalleryAdminList();
+    saveData();
   }
 });
 
-document.querySelector('#add-activity-form').addEventListener('submit', (e) => {
+document.querySelector('#add-event-form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
-  const activity = {
-    name: document.querySelector('#activity-name').value,
-    description: document.querySelector('#activity-description').value,
-    image: document.querySelector('#activity-file').files[0] ? URL.createObjectURL(document.querySelector('#activity-file').files[0]) : '',
-    date: new Date().toISOString()
+  const event = {
+    name: document.querySelector('#event-name').value,
+    date: document.querySelector('#event-date').value,
+    time: document.querySelector('#event-time').value,
+    description: document.querySelector('#event-description').value,
+    image: document.querySelector('#event-file').files[0] ? URL.createObjectURL(document.querySelector('#event-file').files[0]) : ''
   };
-  activities.push(activity);
-  document.querySelector('#add-activity-form').reset();
-  updateActivitiesList();
-  updateActivitiesAdminList();
+  events.push(event);
+  document.querySelector('#add-event-form').reset();
+  updateEventsList();
+  updateEventsAdminList();
+  updateEventsCountdown();
+  saveData();
 });
 
 document.querySelector('#add-message-form').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
+  const title = document.querySelector('#message-title').value;
   const text = document.querySelector('#message-text').value;
-  messages.push({ text, date: new Date().toISOString() });
+  messages.push({ title, text, date: new Date().toISOString() });
   document.querySelector('#add-message-form').reset();
+  showMessagePopup(title, text);
+  sendNotification(title, text);
   updateMessagesList();
   updateMessagesAdminList();
+  saveData();
+});
+
+document.querySelector('#add-auto-message-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentUser || currentUser.role !== 'admin') return;
+  const autoMessage = {
+    name: document.querySelector('#auto-message-name').value,
+    text: document.querySelector('#auto-message-text').value,
+    date: document.querySelector('#auto-message-date').value,
+    time: document.querySelector('#auto-message-time').value,
+    sent: false
+  };
+  autoMessages.push(autoMessage);
+  document.querySelector('#add-auto-message-form').reset();
+  updateAutoMessagesList();
+  saveData();
 });
 
 document.querySelector('#add-note-form').addEventListener('submit', (e) => {
@@ -287,29 +450,7 @@ document.querySelector('#add-note-form').addEventListener('submit', (e) => {
   notes.push({ theme, text });
   document.querySelector('#add-note-form').reset();
   updateNotesList();
-});
-
-document.querySelector('#sensitive-files-auth').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const password = document.querySelector('#sensitive-files-password').value;
-  if (password === sensitiveFilesPassword) {
-    document.querySelector('#sensitive-files-content').style.display = 'block';
-    document.querySelector('#sensitive-files-search').style.display = 'block';
-    updateSensitiveFilesList();
-  } else {
-    alert('Mot de passe incorrect');
-  }
-});
-
-document.querySelector('#add-sensitive-file-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (!currentUser || currentUser.role !== 'president') return;
-  const file = document.querySelector('#sensitive-file').files[0];
-  if (file) {
-    sensitiveFiles.push({ name: file.name, url: URL.createObjectURL(file) });
-    document.querySelector('#add-sensitive-file-form').reset();
-    updateSensitiveFilesList();
-  }
+  saveData();
 });
 
 document.querySelector('#add-internal-doc-form').addEventListener('submit', (e) => {
@@ -317,9 +458,34 @@ document.querySelector('#add-internal-doc-form').addEventListener('submit', (e) 
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#internal-doc').files[0];
   if (file) {
-    internalDocs.push({ name: file.name, url: URL.createObjectURL(file) });
+    internalDocs.push({ category: document.querySelector('#internal-doc-category').value, name: file.name, url: URL.createObjectURL(file) });
     document.querySelector('#add-internal-doc-form').reset();
     updateInternalDocsList();
+    saveData();
+  }
+});
+
+document.querySelector('#add-president-file-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentUser || currentUser.role !== 'president') return;
+  const file = document.querySelector('#president-file').files[0];
+  if (file) {
+    presidentFiles.push({ category: document.querySelector('#president-file-category').value, name: file.name, url: URL.createObjectURL(file) });
+    document.querySelector('#add-president-file-form').reset();
+    updatePresidentFilesList();
+    saveData();
+  }
+});
+
+document.querySelector('#add-secretary-file-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentUser || currentUser.role !== 'secretaire') return;
+  const file = document.querySelector('#secretary-file').files[0];
+  if (file) {
+    secretaryFiles.push({ category: document.querySelector('#secretary-file-category').value, name: file.name, url: URL.createObjectURL(file) });
+    document.querySelector('#add-secretary-file-form').reset();
+    updateSecretaryFilesList();
+    saveData();
   }
 });
 
@@ -336,41 +502,28 @@ function updateMembersList() {
     `).join('');
 }
 
-function updateContributionsList() {
-  const search = document.querySelector('#contributions-search').value.toLowerCase();
-  const list = document.querySelector('#contributions-list');
-  list.innerHTML = contributions
-    .filter(c => c.name.toLowerCase().includes(search))
-    .map(c => `
+function updateContributionsTreasurerList() {
+  const search = document.querySelector('#contributions-treasurer-search').value.toLowerCase();
+  const list = document.querySelector('#contributions-treasurer-list');
+  list.innerHTML = members
+    .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
+    .map(m => `
       <div class="contribution-card">
-        <p><strong>${c.name}</strong>: ${c.amount} FCFA</p>
-      </div>
-    `).join('');
-}
-
-function updateContributionsAdminList() {
-  const search = document.querySelector('#contributions-admin-search').value.toLowerCase();
-  const list = document.querySelector('#contributions-admin-list');
-  list.innerHTML = contributions
-    .filter(c => c.name.toLowerCase().includes(search))
-    .map(c => `
-      <div class="contribution-card">
-        <h4>${c.name} (${c.amount} FCFA)</h4>
-        ${members.map(m => `
+        <h4>${m.firstname} ${m.lastname} (${m.code})</h4>
+        ${contributions.map(c => `
           <div>
-            <p>${m.firstname} ${m.lastname}</p>
-            ${c.name === 'Mensuelle' ? `
-              <select onchange="updateMonthlyPayment('${m.code}', this.value)">
-                <option value="">Choisir un mois</option>
-                <option value="0">Mois 1</option>
-                <option value="1">Mois 2</option>
-                <option value="2">Mois 3</option>
-              </select>
-              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid.map(p => p ? 'Payé' : 'Non payé').join(', ')}</p>
-            ` : `
-              <input type="checkbox" ${m.contributions.find(cont => cont.name === c.name).paid ? 'checked' : ''} onchange="updatePayment('${m.code}', '${c.name}', this.checked)">
-              <input type="number" placeholder="Montant partiel" value="${m.contributions.find(cont => cont.name === c.name).partial}" onchange="updatePartialPayment('${m.code}', '${c.name}', this.value)">
-              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid ? 'Payé' : `Non payé (${m.contributions.find(cont => cont.name === c.name).partial} FCFA)`}</p>
+            <h5>${c.name} (${c.amount} FCFA)</h5>
+            ${c.name === 'Mensuelle' ? c.years.map(year => `
+              <p>${year}</p>
+              ${months.map((month, index) => `
+                <input type="checkbox" id="payment-${m.code}-${year}-${index}" ${m.contributions.find(cont => cont.name === c.name).years[year][index] ? 'checked' : ''} onchange="updateMonthlyPayment('${m.code}', '${year}', ${index}, this.checked)">
+                <label for="payment-${m.code}-${year}-${index}">${month}</label>
+              `).join('')}
+            `).join('') : `
+              <input type="checkbox" id="payment-${m.code}-${c.name}" ${m.contributions.find(cont => cont.name === c.name).paid ? 'checked' : ''} onchange="updatePayment('${m.code}', '${c.name}', this.checked)">
+              <label for="payment-${m.code}-${c.name}">Payé</label>
+              <input type="number" placeholder="Montant partiel" value="${m.contributions.find(cont => cont.name === c.name).partial || 0}" onchange="updatePartialPayment('${m.code}', '${c.name}', this.value)">
+              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid ? 'Payé' : `Non payé (${m.contributions.find(cont => cont.name === c.name).partial || 0} FCFA)`}</p>
             `}
           </div>
         `).join('')}
@@ -378,15 +531,14 @@ function updateContributionsAdminList() {
     `).join('');
 }
 
-function updateMonthlyPayment(memberCode, month) {
+function updateMonthlyPayment(memberCode, year, monthIndex, paid) {
   if (!currentUser || currentUser.role !== 'tresorier') return;
   const member = members.find(m => m.code === memberCode);
-  if (month) {
-    member.contributions.find(c => c.name === 'Mensuelle').paid[parseInt(month)] = true;
-  }
-  updateContributionsAdminList();
+  member.contributions.find(c => c.name === 'Mensuelle').years[year][monthIndex] = paid;
+  updateContributionsTreasurerList();
   updatePersonalInfo();
   updateStats();
+  saveData();
 }
 
 function updatePayment(memberCode, contributionName, paid) {
@@ -394,18 +546,20 @@ function updatePayment(memberCode, contributionName, paid) {
   const member = members.find(m => m.code === memberCode);
   member.contributions.find(c => c.name === contributionName).paid = paid;
   if (paid) member.contributions.find(c => c.name === contributionName).partial = 0;
-  updateContributionsAdminList();
+  updateContributionsTreasurerList();
   updatePersonalInfo();
   updateStats();
+  saveData();
 }
 
 function updatePartialPayment(memberCode, contributionName, amount) {
   if (!currentUser || currentUser.role !== 'tresorier') return;
   const member = members.find(m => m.code === memberCode);
   member.contributions.find(c => c.name === contributionName).partial = parseInt(amount) || 0;
-  updateContributionsAdminList();
+  updateContributionsTreasurerList();
   updatePersonalInfo();
   updateStats();
+  saveData();
 }
 
 function updateEditMembersList() {
@@ -427,14 +581,14 @@ function editMember(code) {
   const member = members.find(m => m.code === code);
   document.querySelector('#new-member-firstname').value = member.firstname;
   document.querySelector('#new-member-lastname').value = member.lastname;
-  document.querySelector('#new-member-age').value = member.age;
-  document.querySelector('#new-member-dob').value = member.dob;
-  document.querySelector('#new-member-birthplace').value = member.birthplace;
-  document.querySelector('#new-member-email').value = member.email;
-  document.querySelector('#new-member-activity').value = member.activity;
-  document.querySelector('#new-member-address').value = member.address;
-  document.querySelector('#new-member-phone').value = member.phone;
-  document.querySelector('#new-member-residence').value = member.residence;
+  document.querySelector('#new-member-age').value = member.age || '';
+  document.querySelector('#new-member-dob').value = member.dob || '';
+  document.querySelector('#new-member-birthplace').value = member.birthplace || '';
+  document.querySelector('#new-member-email').value = member.email || '';
+  document.querySelector('#new-member-activity').value = member.activity || '';
+  document.querySelector('#new-member-address').value = member.address || '';
+  document.querySelector('#new-member-phone').value = member.phone || '';
+  document.querySelector('#new-member-residence').value = member.residence || '';
   document.querySelector('#new-member-role').value = member.role;
   document.querySelector('#new-member-status').value = member.status;
   showTab('add-member');
@@ -446,47 +600,49 @@ function deleteMember(code) {
   document.querySelector('#delete-member-form').style.display = 'block';
 }
 
-function updateActivitiesList() {
-  const search = document.querySelector('#activities-search').value.toLowerCase();
-  const list = document.querySelector('#activities-list');
-  list.innerHTML = activities
-    .filter(a => a.name.toLowerCase().includes(search) || a.description.toLowerCase().includes(search))
-    .map(a => `
-      <div class="activity-card">
-        <h4>${a.name}</h4>
-        <p>${a.description}</p>
-        ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
+function updateEventsList() {
+  const search = document.querySelector('#events-search').value.toLowerCase();
+  const list = document.querySelector('#events-list');
+  list.innerHTML = events
+    .filter(e => e.name.toLowerCase().includes(search) || e.description.toLowerCase().includes(search))
+    .map(e => `
+      <div class="event-card">
+        <h4>${e.name}</h4>
+        <p>${e.description}</p>
+        <p>Date: ${e.date} ${e.time}</p>
+        ${e.image ? `<img src="${e.image}" alt="${e.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
       </div>
     `).join('');
 }
 
-function updateActivitiesAdminList() {
-  const search = document.querySelector('#activities-admin-search').value.toLowerCase();
-  const list = document.querySelector('#activities-admin-list');
-  list.innerHTML = activities
-    .filter(a => a.name.toLowerCase().includes(search) || a.description.toLowerCase().includes(search))
-    .map((a, index) => `
-      <div class="activity-card">
-        <h4>${a.name}</h4>
-        <p>${a.description}</p>
-        ${a.image ? `<img src="${a.image}" alt="${a.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
-        <button class="cta-button" onclick="deleteActivity(${index})">Supprimer</button>
+function updateEventsAdminList() {
+  const search = document.querySelector('#events-admin-search').value.toLowerCase();
+  const list = document.querySelector('#events-admin-list');
+  list.innerHTML = events
+    .filter(e => e.name.toLowerCase().includes(search) || e.description.toLowerCase().includes(search))
+    .map((e, index) => `
+      <div class="event-card">
+        <h4>${e.name}</h4>
+        <p>${e.description}</p>
+        <p>Date: ${e.date} ${e.time}</p>
+        ${e.image ? `<img src="${e.image}" alt="${e.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
+        <button class="cta-button" onclick="deleteEvent(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteActivity(index) {
+function deleteEvent(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
-  activities.splice(index, 1);
-  updateActivitiesList();
-  updateActivitiesAdminList();
+  events.splice(index, 1);
+  updateEventsList();
+  updateEventsAdminList();
+  updateEventsCountdown();
+  saveData();
 }
 
 function updateGalleryContent() {
-  const search = document.querySelector('#gallery-search').value.toLowerCase();
   const content = document.querySelector('#gallery-content');
   content.innerHTML = gallery
-    .filter(g => g.name.toLowerCase().includes(search))
     .map(g => `
       <div>
         ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie">` : `<video src="${g.url}" controls></video>`}
@@ -495,10 +651,8 @@ function updateGalleryContent() {
 }
 
 function updateGalleryAdminList() {
-  const search = document.querySelector('#gallery-admin-search').value.toLowerCase();
   const list = document.querySelector('#gallery-admin-list');
   list.innerHTML = gallery
-    .filter(g => g.name.toLowerCase().includes(search))
     .map((g, index) => `
       <div>
         ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie" style="max-width: 100%; border-radius: 10px;">` : `<video src="${g.url}" controls style="max-width: 100%; border-radius: 10px;"></video>`}
@@ -512,15 +666,16 @@ function deleteGalleryItem(index) {
   gallery.splice(index, 1);
   updateGalleryContent();
   updateGalleryAdminList();
+  saveData();
 }
 
 function updateMessagesList() {
-  const search = document.querySelector('#messages-search').value.toLowerCase();
   const list = document.querySelector('#messages-list');
   list.innerHTML = messages
-    .filter(m => m.text.toLowerCase().includes(search))
+    .slice().reverse()
     .map(m => `
       <div class="message-card">
+        <h4>${m.title}</h4>
         <p>${m.text}</p>
         <p><small>${new Date(m.date).toLocaleString()}</small></p>
       </div>
@@ -528,12 +683,12 @@ function updateMessagesList() {
 }
 
 function updateMessagesAdminList() {
-  const search = document.querySelector('#messages-admin-search').value.toLowerCase();
   const list = document.querySelector('#messages-admin-list');
   list.innerHTML = messages
-    .filter(m => m.text.toLowerCase().includes(search))
+    .slice().reverse()
     .map((m, index) => `
       <div class="message-card">
+        <h4>${m.title}</h4>
         <p>${m.text}</p>
         <p><small>${new Date(m.date).toLocaleString()}</small></p>
         <button class="cta-button" onclick="deleteMessage(${index})">Supprimer</button>
@@ -546,6 +701,30 @@ function deleteMessage(index) {
   messages.splice(index, 1);
   updateMessagesList();
   updateMessagesAdminList();
+  saveData();
+}
+
+function updateAutoMessagesList() {
+  const search = document.querySelector('#auto-messages-search').value.toLowerCase();
+  const list = document.querySelector('#auto-messages-list');
+  list.innerHTML = autoMessages
+    .filter(m => m.name.toLowerCase().includes(search) || m.text.toLowerCase().includes(search))
+    .map((m, index) => `
+      <div class="message-card">
+        <h4>${m.name}</h4>
+        <p>${m.text}</p>
+        <p>Date: ${m.date} ${m.time}</p>
+        <p>Statut: ${m.sent ? 'Envoyé' : 'En attente'}</p>
+        <button class="cta-button" onclick="deleteAutoMessage(${index})">Supprimer</button>
+      </div>
+    `).join('');
+}
+
+function deleteAutoMessage(index) {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  autoMessages.splice(index, 1);
+  updateAutoMessagesList();
+  saveData();
 }
 
 function updateNotesList() {
@@ -555,7 +734,8 @@ function updateNotesList() {
     .filter(n => n.theme.toLowerCase().includes(search) || n.text.toLowerCase().includes(search))
     .map((n, index) => `
       <div class="note-card">
-        <p><strong>${n.theme}</strong>: ${n.text}</p>
+        <h4>${n.theme}</h4>
+        <p>${n.text}</p>
         <button class="cta-button" onclick="deleteNote(${index})">Supprimer</button>
       </div>
     `).join('');
@@ -565,35 +745,19 @@ function deleteNote(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   notes.splice(index, 1);
   updateNotesList();
-}
-
-function updateSensitiveFilesList() {
-  const search = document.querySelector('#sensitive-files-search').value.toLowerCase();
-  const list = document.querySelector('#sensitive-files-list');
-  list.innerHTML = sensitiveFiles
-    .filter(f => f.name.toLowerCase().includes(search))
-    .map((f, index) => `
-      <div class="file-card">
-        <a href="${f.url}" download>${f.name}</a>
-        <button class="cta-button" onclick="deleteSensitiveFile(${index})">Supprimer</button>
-      </div>
-    `).join('');
-}
-
-function deleteSensitiveFile(index) {
-  if (!currentUser || currentUser.role !== 'president') return;
-  sensitiveFiles.splice(index, 1);
-  updateSensitiveFilesList();
+  saveData();
 }
 
 function updateInternalDocsList() {
   const search = document.querySelector('#internal-docs-search').value.toLowerCase();
   const list = document.querySelector('#internal-docs-list');
   list.innerHTML = internalDocs
-    .filter(d => d.name.toLowerCase().includes(search))
+    .filter(d => d.category.toLowerCase().includes(search) || d.name.toLowerCase().includes(search))
     .map((d, index) => `
       <div class="file-card">
-        <a href="${d.url}" download>${d.name}</a>
+        <p><strong>Catégorie :</strong> ${d.category}</p>
+        <p><strong>Nom :</strong> ${d.name}</p>
+        <a href="${d.url}" target="_blank">Ouvrir</a>
         <button class="cta-button" onclick="deleteInternalDoc(${index})">Supprimer</button>
       </div>
     `).join('');
@@ -603,6 +767,65 @@ function deleteInternalDoc(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   internalDocs.splice(index, 1);
   updateInternalDocsList();
+  saveData();
+}
+
+function updatePresidentFilesList() {
+  const search = document.querySelector('#president-files-search').value.toLowerCase();
+  const list = document.querySelector('#president-files-list');
+  list.innerHTML = presidentFiles
+    .filter(f => f.category.toLowerCase().includes(search) || f.name.toLowerCase().includes(search))
+    .map((f, index) => `
+      <div class="file-card">
+        <p><strong>Catégorie :</strong> ${f.category}</p>
+        <p><strong>Nom :</strong> ${f.name}</p>
+        <a href="${f.url}" target="_blank">Ouvrir</a>
+        <button class="cta-button" onclick="deletePresidentFile(${index})">Supprimer</button>
+      </div>
+    `).join('');
+}
+
+function deletePresidentFile(index) {
+  if (!currentUser || currentUser.role !== 'president') return;
+  presidentFiles.splice(index, 1);
+  updatePresidentFilesList();
+  saveData();
+}
+
+function updateSecretaryFilesList() {
+  const search = document.querySelector('#secretary-files-search').value.toLowerCase();
+  const list = document.querySelector('#secretary-files-list');
+  list.innerHTML = secretaryFiles
+    .filter(f => f.category.toLowerCase().includes(search) || f.name.toLowerCase().includes(search))
+    .map((f, index) => `
+      <div class="file-card">
+        <p><strong>Catégorie :</strong> ${f.category}</p>
+        <p><strong>Nom :</strong> ${f.name}</p>
+        <a href="${f.url}" target="_blank">Ouvrir</a>
+        <button class="cta-button" onclick="deleteSecretaryFile(${index})">Supprimer</button>
+      </div>
+    `).join('');
+}
+
+function deleteSecretaryFile(index) {
+  if (!currentUser || currentUser.role !== 'secretaire') return;
+  secretaryFiles.splice(index, 1);
+  updateSecretaryFilesList();
+  saveData();
+}
+
+function updateLibraryContent() {
+  const search = document.querySelector('#library-search').value.toLowerCase();
+  const content = document.querySelector('#library-content');
+  content.innerHTML = library
+    .filter(l => l.category.toLowerCase().includes(search) || l.name.toLowerCase().includes(search))
+    .map(l => `
+      <div class="file-card">
+        <p><strong>Catégorie :</strong> ${l.category}</p>
+        <p><strong>Nom :</strong> ${l.name}</p>
+        <a href="${l.url}" target="_blank">Ouvrir</a>
+      </div>
+    `).join('');
 }
 
 function updateSuggestionsList() {
@@ -612,7 +835,9 @@ function updateSuggestionsList() {
     .filter(s => s.member.toLowerCase().includes(search) || s.text.toLowerCase().includes(search))
     .map((s, index) => `
       <div class="suggestion-card">
-        <p><strong>${s.member}</strong>: ${s.text}</p>
+        <p><strong>Membre :</strong> ${s.member}</p>
+        <p>${s.text}</p>
+        <p><small>${new Date(s.date).toLocaleString()}</small></p>
         <button class="cta-button" onclick="deleteSuggestion(${index})">Supprimer</button>
       </div>
     `).join('');
@@ -622,80 +847,89 @@ function deleteSuggestion(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   suggestions.splice(index, 1);
   updateSuggestionsList();
-}
-
-function updateCoranContent() {
-  const search = document.querySelector('#coran-search').value.toLowerCase();
-  const content = document.querySelector('#coran-content');
-  content.innerHTML = Array(30).fill()
-    .map((_, i) => ({ juz: `Juz' ${i + 1}`, id: i + 1 }))
-    .filter(j => j.juz.toLowerCase().includes(search))
-    .map(j => `<p style="font-family: 'Amiri', serif; font-size: 1.2rem;">${j.juz}</p>`).join('');
+  saveData();
 }
 
 function updatePersonalInfo() {
   if (!currentUser) return;
   const info = document.querySelector('#personal-info');
-  const contributions = document.querySelector('#personal-contributions');
+  const contributionsDiv = document.querySelector('#personal-contributions');
   info.innerHTML = `
-    <img src="${currentUser.photo}" alt="${currentUser.firstname} ${currentUser.lastname}" style="width: 100px; border-radius: 50%;">
     <p><strong>Prénom :</strong> ${currentUser.firstname}</p>
     <p><strong>Nom :</strong> ${currentUser.lastname}</p>
-    <p><strong>Âge :</strong> ${currentUser.age}</p>
-    <p><strong>Date de naissance :</strong> ${currentUser.dob}</p>
-    <p><strong>Lieu de naissance :</strong> ${currentUser.birthplace}</p>
-    <p><strong>Email :</strong> ${currentUser.email}</p>
-    <p><strong>Activité :</strong> ${currentUser.activity}</p>
-    <p><strong>Adresse :</strong> ${currentUser.address}</p>
-    <p><strong>Téléphone :</strong> ${currentUser.phone}</p>
-    <p><strong>Résidence :</strong> ${currentUser.residence}</p>
-    <p><strong>Rôle :</strong> ${currentUser.role}</p>
-    <p><strong>Statut :</strong> ${currentUser.status}</p>
+    <p><strong>Numéro :</strong> ${currentUser.code}</p>
+    ${currentUser.email ? `<p><strong>Email :</strong> ${currentUser.email}</p>` : ''}
+    ${currentUser.phone ? `<p><strong>Téléphone :</strong> ${currentUser.phone}</p>` : ''}
+    ${currentUser.address ? `<p><strong>Adresse :</strong> ${currentUser.address}</p>` : ''}
+    ${currentUser.activity ? `<p><strong>Activité :</strong> ${currentUser.activity}</p>` : ''}
   `;
-  contributions.innerHTML = currentUser.contributions.map(c => `
+  contributionsDiv.innerHTML = currentUser.contributions.map(c => `
     <div class="contribution-card">
-      <p><strong>${c.name}</strong>: ${c.amount} FCFA</p>
-      <p>Statut: ${c.name === 'Mensuelle' ? c.paid.map(p => p ? 'Payé' : 'Non payé').join(', ') : c.paid ? 'Payé' : `Non payé (${c.partial} FCFA)`}</p>
+      <h4>${c.name} (${c.amount} FCFA)</h4>
+      ${c.name === 'Mensuelle' ? Object.keys(c.years).map(year => `
+        <p>${year} - Payé: ${c.years[year].map((paid, i) => paid ? months[i] : '').filter(m => m).join(', ') || 'Aucun'}</p>
+        <p>${year} - Non payé: ${c.years[year].map((paid, i) => !paid ? months[i] : '').filter(m => m).join(', ') || 'Aucun'}</p>
+      `).join('') : `
+        <p>Statut: ${c.paid ? 'Payé' : `Non payé (${c.partial || 0} FCFA)`}</p>
+      `}
     </div>
   `).join('');
 }
 
+function updateCoranContent() {
+  const search = document.querySelector('#coran-search').value.toLowerCase();
+  const content = document.querySelector('#coran-content');
+  content.innerHTML = Array.from({ length: 30 }, (_, i) => i + 1)
+    .filter(j => `juz ${j}`.includes(search))
+    .map(j => `
+      <div class="file-card">
+        <p><strong>Juz ${j}</strong></p>
+        <a href="assets/coran/juz${j}.pdf" target="_blank">Ouvrir</a>
+      </div>
+    `).join('');
+}
+
 function updateStats() {
-  const totalAmount = members.reduce((sum, m) => sum + m.contributions.reduce((s, c) => s + (c.name === 'Mensuelle' ? c.paid.filter(p => p).length * c.amount : c.paid ? c.amount : c.partial), 0), 0);
-  const membersCount = members.length;
-  const activeMembers = members.filter(m => m.status === 'actif').length;
-  const upToDateMembers = members.filter(m => m.contributions.every(c => c.name === 'Mensuelle' ? c.paid.every(p => p) : c.paid)).length;
+  const totalAmount = members.reduce((sum, m) => sum + m.contributions.reduce((s, c) => s + (c.name === 'Mensuelle' ? Object.values(c.years).flat().filter(p => p).length * c.amount : c.paid ? c.amount : c.partial || 0), 0), 0);
+  const membersByStatus = members.reduce((acc, m) => ({ ...acc, [m.status]: (acc[m.status] || 0) + 1 }), {});
+  const contributionsByYear = contributions.find(c => c.name === 'Mensuelle')?.years.reduce((acc, year) => ({
+    ...acc,
+    [year]: members.reduce((sum, m) => sum + m.contributions.find(c => c.name === 'Mensuelle').years[year].filter(p => p).length, 0)
+  }), {}) || {};
 
   new Chart(document.getElementById('stats-total-amount'), {
     type: 'bar',
     data: {
-      labels: ['Somme totale'],
-      datasets: [{ label: 'Montant (FCFA)', data: [totalAmount], backgroundColor: '#9b9c28' }]
-    }
+      labels: ['Montant Total'],
+      datasets: [{ label: 'FCFA', data: [totalAmount], backgroundColor: '#9b9c28' }]
+    },
+    options: { scales: { y: { beginAtZero: true } } }
   });
 
   new Chart(document.getElementById('stats-members'), {
     type: 'pie',
     data: {
-      labels: ['Membres'],
-      datasets: [{ data: [membersCount], backgroundColor: ['#3a6241'] }]
+      labels: ['Actif', 'Inactif', 'Liste noire'],
+      datasets: [{ data: [membersByStatus.actif || 0, membersByStatus.inactif || 0, membersByStatus['liste-noire'] || 0], backgroundColor: ['#9b9c28', '#778152', '#3a6241'] }]
     }
   });
 
   new Chart(document.getElementById('stats-status'), {
-    type: 'pie',
+    type: 'bar',
     data: {
-      labels: ['Actifs', 'Inactifs', 'Liste noire'],
-      datasets: [{ data: [activeMembers, membersCount - activeMembers - members.filter(m => m.status === 'liste-noire').length, members.filter(m => m.status === 'liste-noire').length], backgroundColor: ['#3a6241', '#778152', '#9b9c28'] }]
-    }
+      labels: ['Actif', 'Inactif', 'Liste noire'],
+      datasets: [{ label: 'Membres', data: [membersByStatus.actif || 0, membersByStatus.inactif || 0, membersByStatus['liste-noire'] || 0], backgroundColor: '#9b9c28' }]
+    },
+    options: { scales: { y: { beginAtZero: true } } }
   });
 
   new Chart(document.getElementById('stats-contributions'), {
     type: 'bar',
     data: {
-      labels: ['À jour', 'En retard'],
-      datasets: [{ label: 'Membres', data: [upToDateMembers, membersCount - upToDateMembers], backgroundColor: ['#3a6241', '#9b9c28'] }]
-    }
+      labels: Object.keys(contributionsByYear),
+      datasets: [{ label: 'Cotisations Mensuelles', data: Object.values(contributionsByYear), backgroundColor: '#9b9c28' }]
+    },
+    options: { scales: { y: { beginAtZero: true } } }
   });
 }
 
@@ -706,13 +940,13 @@ function updateCallMembersList() {
     .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
     .map(m => `
       <div class="member-card">
-        <input type="checkbox" id="call-${m.code}" value="${m.code}" onchange="updateSelectedCallMembers('${m.code}', this.checked)">
+        <input type="checkbox" id="call-${m.code}" value="${m.code}" onchange="toggleCallMember('${m.code}', this.checked)">
         <label for="call-${m.code}">${m.firstname} ${m.lastname} (${m.code})</label>
       </div>
     `).join('');
 }
 
-function updateSelectedCallMembers(code, checked) {
+function toggleCallMember(code, checked) {
   if (checked) {
     selectedCallMembers.push(code);
   } else {
@@ -720,69 +954,29 @@ function updateSelectedCallMembers(code, checked) {
   }
 }
 
-function initVideoCall() {
-  if (!currentUser || currentUser.role !== 'admin') {
-    document.querySelector('#video-call-container').innerHTML = '<p>Accès réservé aux membres du bureau.</p>';
-    return;
-  }
+function toggleCallAll(checked) {
+  selectedCallMembers = checked ? members.map(m => m.code) : [];
   updateCallMembersList();
-  document.querySelector('#video-call-container').innerHTML = '<p>Sélectionnez les membres à appeler ou utilisez "Appeler tout le monde".</p>';
-}
-
-function callAllMembers() {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  selectedCallMembers = members.map(m => m.code);
-  startCall('video');
-}
-
-function startSelectedCall(type) {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  if (selectedCallMembers.length === 0) {
-    alert('Veuillez sélectionner au moins un membre.');
-    return;
-  }
-  startCall(type);
 }
 
 function startCall(type) {
-  const roomId = `ansar-room-${Date.now()}`;
-  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmFwcGVhci5pbiIsImF1ZCI6Imh0dHBzOi8vYXBpLmFwcGVhci5pbi92MSIsImV4cCI6OTAwNzE5OTI1NDc0MDk5MSwiaWF0IjoxNzUyNzQzMzY5LCJvcmdhbml6YXRpb25JZCI6MzIwMzY3LCJqdGkiOiJmYzdmMjhiYS0xZTViLTRhYjAtOGQwZi1kZWNjNzAxYzkyNzAifQ.2WXwlPQj_-Da17X3IXJrVFYfiAsGlxzaRftPiG5oFWI';
-  const videoCallContainer = document.querySelector('#video-call-container');
-  const roomUrl = `https://ansar-almouyassar.whereby.com/${roomId}?token=${token}&${type === 'audio' ? 'audioOnly=true' : ''}&displayName=${currentUser.firstname} ${currentUser.lastname}`;
-  videoCallContainer.innerHTML = `<whereby-embed room="${roomUrl}"></whereby-embed>`;
-  alert(`${type === 'video' ? 'Appel vidéo' : 'Appel audio'} démarré avec ${selectedCallMembers.length} membre(s).`);
+  if (!selectedCallMembers.length) {
+    alert('Veuillez sélectionner au moins un membre.');
+    return;
+  }
+  const container = document.querySelector('#video-call-container');
+  container.innerHTML = '';
+  const room = document.createElement('where-by');
+  room.setAttribute('room', 'https://ansar.whereby.com/conference');
+  room.setAttribute('displayName', currentUser ? `${currentUser.firstname} ${currentUser.lastname}` : 'Invité');
+  room.setAttribute('audio', type === 'audio' ? 'true' : 'false');
+  room.setAttribute('video', type === 'video' ? 'true' : 'false');
+  container.appendChild(room);
 }
 
-function payContribution() {
-  window.open('https://wave.com', '_blank');
-}
-
-document.querySelector('#members-search').addEventListener('input', updateMembersList);
-document.querySelector('#contributions-search').addEventListener('input', updateContributionsList);
-document.querySelector('#activities-search').addEventListener('input', updateActivitiesList);
-document.querySelector('#gallery-search').addEventListener('input', updateGalleryContent);
-document.querySelector('#messages-search').addEventListener('input', updateMessagesList);
-document.querySelector('#coran-search').addEventListener('input', updateCoranContent);
-document.querySelector('#edit-member-search').addEventListener('input', updateEditMembersList);
-document.querySelector('#contributions-admin-search').addEventListener('input', updateContributionsAdminList);
-document.querySelector('#gallery-admin-search').addEventListener('input', updateGalleryAdminList);
-document.querySelector('#activities-admin-search').addEventListener('input', updateActivitiesAdminList);
-document.querySelector('#messages-admin-search').addEventListener('input', updateMessagesAdminList);
-document.querySelector('#notes-search').addEventListener('input', updateNotesList);
-document.querySelector('#sensitive-files-search').addEventListener('input', updateSensitiveFilesList);
-document.querySelector('#internal-docs-search').addEventListener('input', updateInternalDocsList);
-document.querySelector('#suggestions-search').addEventListener('input', updateSuggestionsList);
-document.querySelector('#video-calls-search').addEventListener('input', updateCallMembersList);
-
-updateMembersList();
-updateContributionsList();
-updateContributionsAdminList();
-updateActivitiesList();
-updateGalleryContent();
-updateMessagesList();
-updateNotesList();
-updateSensitiveFilesList();
-updateInternalDocsList();
-updateSuggestionsList();
-updateCoranContent();
-updateStats();
+document.addEventListener('DOMContentLoaded', () => {
+  showPage('home');
+  updateEventsCountdown();
+  checkAutoMessages();
+  updateContributionsYears();
+});
