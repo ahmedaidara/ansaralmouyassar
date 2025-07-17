@@ -24,7 +24,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 1rem;
   background: var(--primary-color);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -32,7 +32,6 @@ body {
   top: 0;
   width: 100%;
   z-index: 1000;
-  box-sizing: border-box;
 }
 
 .logo {
@@ -41,8 +40,7 @@ body {
 
 .settings-icon {
   cursor: pointer;
-  font-size: 28px;
-  margin-right: 10px;
+  font-size: 24px;
 }
 
 main {
@@ -109,7 +107,6 @@ main {
   cursor: pointer;
   font-size: 1.2rem;
   transition: transform 0.3s ease;
-  margin: 0.5rem;
 }
 
 .cta-button:hover {
@@ -174,15 +171,12 @@ main {
   bottom: 160px;
   right: 20px;
   width: 300px;
-  height: 400px;
   background: url('assets/images/chatbot-bg.jpg') no-repeat center center;
   background-size: contain;
   border: 1px solid var(--secondary-color);
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  display: flex;
-  flex-direction: column;
 }
 
 .chatbot-header {
@@ -196,7 +190,6 @@ main {
 }
 
 .chatbot-messages {
-  flex-grow: 1;
   max-height: 300px;
   overflow-y: auto;
   padding: 1rem;
@@ -220,17 +213,6 @@ main {
   color: white;
 }
 
-#chatbot-controls {
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.8);
-  text-align: center;
-}
-
-.clear-history {
-  padding: 0.5rem;
-  font-size: 0.9rem;
-}
-
 #chatbot-form {
   display: flex;
   padding: 0.5rem;
@@ -240,11 +222,6 @@ main {
 #chatbot-input {
   flex-grow: 1;
   margin-right: 0.5rem;
-}
-
-#secret-entry {
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.8);
 }
 
 form {
@@ -354,10 +331,6 @@ canvas {
     padding: 0.5rem;
   }
 
-  .top-nav {
-    padding: 1rem;
-  }
-
   .bottom-nav {
     grid-template-columns: repeat(8, 1fr);
     gap: 0.3rem;
@@ -369,7 +342,6 @@ canvas {
   }
 
   .chatbot-container {
-    width: 300px;
-    height: 400px;
+    width: 90%;
   }
 }
