@@ -1,59 +1,114 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
+const DB_NAME = 'ansar-almouyassar';
+const DB_VERSION = 1;
+let db;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB7-fXR59CqNMyYgZTDAdBNpMTE_GkcOlA",
-  authDomain: "ansar-93d9e.firebaseapp.com",
-  projectId: "ansar-93d9e",
-  storageBucket: "ansar-93d9e.firebasestorage.app",
-  messagingSenderId: "697623655771",
-  appId: "1:697623655771:web:2487489b5825ab211f567e",
-  measurementId: "G-N3LBBHM2N0"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const storage = getStorage(app);
-
-let members = [];
-let contributions = [];
-let events = [];
-let suggestions = [];
-let gallery = [];
-let messages = [];
-let autoMessages = [];
-let notes = [];
-let internalDocs = [];
-let presidentFiles = [];
-let secretaryFiles = [];
-let library = [];
+const members = [
+  {
+    code: '001',
+    firstname: 'Mouhamed',
+    lastname: 'Niang',
+    age: 45,
+    dob: '01012000',
+    birthplace: 'Dakar',
+    photo: 'assets/images/default-photo.png',
+    email: 'mouhamed.niang@example.com',
+    activity: 'Président',
+    address: '123 Rue Principale, Dakar',
+    phone: '+221123456789',
+    residence: 'Dakar',
+    role: 'president',
+    status: 'actif',
+    contributions: { '2023': Array(12).fill(false), '2024': Array(12).fill(false), '2025': Array(12).fill(false) }
+  }
+];
+const contributions = [{ name: 'Mensuelle', amount: 2000, years: ['2023', '2024', '2025'] }];
+const events = [{ name: 'Conférence Annuelle', description: 'Conférence 2025', image: 'assets/images/conference.jpg', datetime: '2025-08-17T15:00:00' }];
+const suggestions = [];
+const gallery = [];
+const messages = [];
+const autoMessages = [];
+const notes = [];
+const internalDocs = [];
+const presidentFiles = [];
+const secretaryFiles = [];
+const library = [];
 const presidentCode = '0000';
 let currentUser = null;
 let isChatOpen = false;
 let selectedCallMembers = [];
-let secretEntryTimeout;
 
-function syncData(path, localArray, updateFunction) {
-  const dbRef = ref(db, path);
-  onValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    localArray.length = 0;
-    if (data) {
-      Object.values(data).forEach(item => localArray.push(item));
-    }
-    updateFunction();
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (event) => {
+      db = event.target.result;
+      db.createObjectStore('members', { keyPath: 'code' });
+      db.createObjectStore('contributions', { keyPath: 'name' });
+      db.createObjectStore('events', { autoIncrement: true });
+      db.createObjectStore('suggestions', { autoIncrement: true });
+      db.createObjectStore('gallery', { autoIncrement: true });
+      db.createObjectStore('messages', { autoIncrement: true });
+      db.createObjectStore('autoMessages', { autoIncrement: true });
+      db.createObjectStore('notes', { autoIncrement: true });
+      db.createObjectStore('internalDocs', { autoIncrement: true });
+      db.createObjectStore('presidentFiles', { autoIncrement: true });
+      db.createObjectStore('secretaryFiles', { autoIncrement: true });
+      db.createObjectStore('library', { autoIncrement: true });
+    };
+    request.onsuccess = (event) => {
+      db = event.target.result;
+      resolve();
+    };
+    request.onerror = (event) => reject(event.target.error);
   });
 }
 
-function saveData(path, data) {
-  return set(ref(db, path), data);
+function saveToDB(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = Array.isArray(data) ? data.forEach(item => store.put(item)) : store.put(data);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
 }
 
-async function uploadFile(file, path) {
-  const fileRef = storageRef(storage, `${path}/${Date.now()}_${file.name}`);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
+function loadFromDB(storeName) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function initDB() {
+  await openDB();
+  const storedMembers = await loadFromDB('members');
+  if (storedMembers.length > 0) members.splice(0, members.length, ...storedMembers);
+  const storedContributions = await loadFromDB('contributions');
+  if (storedContributions.length > 0) contributions.splice(0, contributions.length, ...storedContributions);
+  const storedEvents = await loadFromDB('events');
+  if (storedEvents.length > 0) events.splice(0, events.length, ...storedEvents);
+  const storedSuggestions = await loadFromDB('suggestions');
+  if (storedSuggestions.length > 0) suggestions.splice(0, suggestions.length, ...storedSuggestions);
+  const storedGallery = await loadFromDB('gallery');
+  if (storedGallery.length > 0) gallery.splice(0, gallery.length, ...storedGallery);
+  const storedMessages = await loadFromDB('messages');
+  if (storedMessages.length > 0) messages.splice(0, messages.length, ...storedMessages);
+  const storedAutoMessages = await loadFromDB('autoMessages');
+  if (storedAutoMessages.length > 0) autoMessages.splice(0, autoMessages.length, ...storedAutoMessages);
+  const storedNotes = await loadFromDB('notes');
+  if (storedNotes.length > 0) notes.splice(0, notes.length, ...storedNotes);
+  const storedInternalDocs = await loadFromDB('internalDocs');
+  if (storedInternalDocs.length > 0) internalDocs.splice(0, internalDocs.length, ...storedInternalDocs);
+  const storedPresidentFiles = await loadFromDB('presidentFiles');
+  if (storedPresidentFiles.length > 0) presidentFiles.splice(0, presidentFiles.length, ...storedPresidentFiles);
+  const storedSecretaryFiles = await loadFromDB('secretaryFiles');
+  if (storedSecretaryFiles.length > 0) secretaryFiles.splice(0, secretaryFiles.length, ...storedSecretaryFiles);
+  const storedLibrary = await loadFromDB('library');
+  if (storedLibrary.length > 0) library.splice(0, library.length, ...storedLibrary);
 }
 
 function showPage(pageId) {
@@ -90,9 +145,9 @@ function showTab(tabId) {
   if (tabId === 'stats') updateStats();
   if (tabId === 'video-calls') initVideoCall();
   if (tabId === 'auto-messages') updateAutoMessagesList();
-  if (tabId === 'treasurer-contributions') updateContributionsAdminList();
-  if (tabId === 'president-files') updatePresidentFilesList();
-  if (tabId === 'secretary-files') updateSecretaryFilesList();
+  if (tabId === 'treasurer') updateContributionsAdminList();
+  if (tabId === 'president') updatePresidentFilesList();
+  if (tabId === 'secretary') updateSecretaryFilesList();
 }
 
 function toggleTheme() {
@@ -130,23 +185,8 @@ function toggleChatbot() {
   document.querySelector('#chatbot').style.display = isChatOpen ? 'block' : 'none';
   if (isChatOpen) {
     document.querySelector('#chatbot-messages').innerHTML = '<div class="chatbot-message received">Bienvenue ! Posez une question ou utilisez un mot-clé comme "association", "membre", "cotisation", etc.</div>';
-  } else {
-    document.querySelector('#secret-entry').style.display = 'none';
-    clearTimeout(secretEntryTimeout);
   }
 }
-
-function clearChatHistory() {
-  document.querySelector('#chatbot-messages').innerHTML = '<div class="chatbot-message received">Historique effacé. Posez une question ou utilisez un mot-clé comme "association", "membre", "cotisation", etc.</div>';
-}
-
-document.addEventListener('click', (e) => {
-  const chatbot = document.querySelector('#chatbot');
-  const chatbotButton = document.querySelector('.chatbot-button');
-  if (isChatOpen && !chatbot.contains(e.target) && !chatbotButton.contains(e.target)) {
-    toggleChatbot();
-  }
-});
 
 document.querySelector('.chatbot-button').addEventListener('click', toggleChatbot);
 
@@ -160,9 +200,6 @@ document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
   const secretCodes = ['ADMIN12301012000', '00000000', '11111111', '22222222'];
   if (secretCodes.includes(message)) {
     document.querySelector('#secret-entry').style.display = 'block';
-    secretEntryTimeout = setTimeout(() => {
-      document.querySelector('#secret-entry').style.display = 'none';
-    }, 30000);
   } else {
     const response = getChatbotResponse(message);
     messages.innerHTML += `<div class="chatbot-message received">${response}</div>`;
@@ -183,18 +220,18 @@ function enterSecret() {
     toggleChatbot();
   } else if (treasurerCodes.includes(password)) {
     currentUser = { code: 'TRESORIER', role: 'tresorier' };
-    showPage('treasurer');
-    showTab('treasurer-contributions');
+    showPage('secret');
+    showTab('treasurer');
     toggleChatbot();
   } else if (presidentCodes.includes(password)) {
     currentUser = { code: 'PRESIDENT', role: 'president' };
-    showPage('president');
-    showTab('president-files');
+    showPage('secret');
+    showTab('president');
     toggleChatbot();
   } else if (secretaryCodes.includes(password)) {
     currentUser = { code: 'SECRETAIRE', role: 'secretaire' };
-    showPage('secretary');
-    showTab('secretary-files');
+    showPage('secret');
+    showTab('secretary');
     toggleChatbot();
   } else {
     document.querySelector('#chatbot-messages').innerHTML += '<div class="chatbot-message received">Mot de passe incorrect.</div>';
@@ -244,7 +281,7 @@ document.querySelector('#add-member-form').addEventListener('submit', async (e) 
     age: parseInt(document.querySelector('#new-member-age').value) || null,
     dob: document.querySelector('#new-member-dob').value || null,
     birthplace: document.querySelector('#new-member-birthplace').value || null,
-    photo: document.querySelector('#new-member-photo').files[0] ? await uploadFile(document.querySelector('#new-member-photo').files[0], 'members') : 'assets/images/default-photo.png',
+    photo: document.querySelector('#new-member-photo').files[0] ? URL.createObjectURL(document.querySelector('#new-member-photo').files[0]) : 'assets/images/default-photo.png',
     email: document.querySelector('#new-member-email').value || null,
     activity: document.querySelector('#new-member-activity').value || null,
     address: document.querySelector('#new-member-address').value || null,
@@ -261,8 +298,12 @@ document.querySelector('#add-member-form').addEventListener('submit', async (e) 
     }))
   };
   members.push(member);
-  await saveData('members', members);
+  await saveToDB('members', members);
   document.querySelector('#add-member-form').reset();
+  updateMembersList();
+  updateEditMembersList();
+  updateCallMembersList();
+  updateStats();
 });
 
 document.querySelector('#delete-member-form').addEventListener('submit', async (e) => {
@@ -276,7 +317,11 @@ document.querySelector('#delete-member-form').addEventListener('submit', async (
   const index = members.findIndex(m => m.code === memberCode);
   if (index !== -1) {
     members.splice(index, 1);
-    await saveData('members', members);
+    await saveToDB('members', members);
+    updateMembersList();
+    updateEditMembersList();
+    updateCallMembersList();
+    updateStats();
     document.querySelector('#delete-member-form').style.display = 'none';
   }
 });
@@ -294,9 +339,12 @@ document.querySelector('#add-contribution-form').addEventListener('submit', asyn
       member.contributions[name] = { [currentYear]: Array(12).fill(false) };
     }
   });
-  await saveData('contributions', contributions);
-  await saveData('members', members);
+  await saveToDB('contributions', contributions);
+  await saveToDB('members', members);
   document.querySelector('#add-contribution-form').reset();
+  updateContributionsAdminList();
+  updatePersonalInfo();
+  updateStats();
 });
 
 document.querySelector('#suggestion-form').addEventListener('submit', async (e) => {
@@ -304,8 +352,9 @@ document.querySelector('#suggestion-form').addEventListener('submit', async (e) 
   if (!currentUser) return;
   const text = document.querySelector('#suggestion-text').value;
   suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text });
-  await saveData('suggestions', suggestions);
+  await saveToDB('suggestions', suggestions);
   document.querySelector('#suggestion-form').reset();
+  updateSuggestionsList();
 });
 
 document.querySelector('#add-gallery-form').addEventListener('submit', async (e) => {
@@ -313,10 +362,11 @@ document.querySelector('#add-gallery-form').addEventListener('submit', async (e)
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#gallery-file').files[0];
   if (file) {
-    const url = await uploadFile(file, 'gallery');
-    gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url, name: file.name });
-    await saveData('gallery', gallery);
+    gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url: URL.createObjectURL(file), name: file.name });
+    await saveToDB('gallery', gallery);
     document.querySelector('#add-gallery-form').reset();
+    updateGalleryContent();
+    updateGalleryAdminList();
   }
 });
 
@@ -327,11 +377,14 @@ document.querySelector('#add-event-form').addEventListener('submit', async (e) =
     name: document.querySelector('#event-name').value,
     description: document.querySelector('#event-description').value,
     datetime: new Date(`${document.querySelector('#event-date').value}T${document.querySelector('#event-time').value}`).toISOString(),
-    image: document.querySelector('#event-file').files[0] ? await uploadFile(document.querySelector('#event-file').files[0], 'events') : ''
+    image: document.querySelector('#event-file').files[0] ? URL.createObjectURL(document.querySelector('#event-file').files[0]) : ''
   };
   events.push(event);
-  await saveData('events', events);
+  await saveToDB('events', events);
   document.querySelector('#add-event-form').reset();
+  updateEventsList();
+  updateEventsAdminList();
+  updateEventCountdowns();
 });
 
 document.querySelector('#add-message-form').addEventListener('submit', async (e) => {
@@ -341,8 +394,11 @@ document.querySelector('#add-message-form').addEventListener('submit', async (e)
   const text = document.querySelector('#message-text').value;
   const message = { title, text, date: new Date().toISOString() };
   messages.unshift(message);
-  await saveData('messages', messages);
+  await saveToDB('messages', messages);
   document.querySelector('#add-message-form').reset();
+  updateMessagesList();
+  updateMessagesAdminList();
+  updateMessagePopups();
   sendNotification('Nouveau message', `${title}: ${text}`);
 });
 
@@ -355,8 +411,9 @@ document.querySelector('#add-auto-message-form').addEventListener('submit', asyn
     datetime: new Date(`${document.querySelector('#auto-message-date').value}T${document.querySelector('#auto-message-time').value}`).toISOString()
   };
   autoMessages.push(autoMessage);
-  await saveData('autoMessages', autoMessages);
+  await saveToDB('autoMessages', autoMessages);
   document.querySelector('#add-auto-message-form').reset();
+  updateAutoMessagesList();
 });
 
 document.querySelector('#add-note-form').addEventListener('submit', async (e) => {
@@ -367,8 +424,9 @@ document.querySelector('#add-note-form').addEventListener('submit', async (e) =>
     text: document.querySelector('#note-text').value
   };
   notes.push(note);
-  await saveData('notes', notes);
+  await saveToDB('notes', notes);
   document.querySelector('#add-note-form').reset();
+  updateNotesList();
 });
 
 document.querySelector('#add-internal-doc-form').addEventListener('submit', async (e) => {
@@ -376,10 +434,10 @@ document.querySelector('#add-internal-doc-form').addEventListener('submit', asyn
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#internal-doc').files[0];
   if (file) {
-    const url = await uploadFile(file, 'internalDocs');
-    internalDocs.push({ name: file.name, url, category: document.querySelector('#internal-doc-category').value });
-    await saveData('internalDocs', internalDocs);
+    internalDocs.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#internal-doc-category').value });
+    await saveToDB('internalDocs', internalDocs);
     document.querySelector('#add-internal-doc-form').reset();
+    updateInternalDocsList();
   }
 });
 
@@ -388,10 +446,10 @@ document.querySelector('#add-president-file-form').addEventListener('submit', as
   if (!currentUser || currentUser.role !== 'president') return;
   const file = document.querySelector('#president-file').files[0];
   if (file) {
-    const url = await uploadFile(file, 'presidentFiles');
-    presidentFiles.push({ name: file.name, url, category: document.querySelector('#president-file-category').value });
-    await saveData('presidentFiles', presidentFiles);
+    presidentFiles.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#president-file-category').value });
+    await saveToDB('presidentFiles', presidentFiles);
     document.querySelector('#add-president-file-form').reset();
+    updatePresidentFilesList();
   }
 });
 
@@ -400,10 +458,10 @@ document.querySelector('#add-secretary-file-form').addEventListener('submit', as
   if (!currentUser || currentUser.role !== 'secretaire') return;
   const file = document.querySelector('#secretary-file').files[0];
   if (file) {
-    const url = await uploadFile(file, 'secretaryFiles');
-    secretaryFiles.push({ name: file.name, url, category: document.querySelector('#secretary-file-category').value });
-    await saveData('secretaryFiles', secretaryFiles);
+    secretaryFiles.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#secretary-file-category').value });
+    await saveToDB('secretaryFiles', secretaryFiles);
     document.querySelector('#add-secretary-file-form').reset();
+    updateSecretaryFilesList();
   }
 });
 
@@ -451,7 +509,10 @@ async function updateMonthlyPayment(memberCode, contributionName, year, monthInd
   if (!currentUser || currentUser.role !== 'tresorier') return;
   const member = members.find(m => m.code === memberCode);
   member.contributions[contributionName][year][monthIndex] = paid;
-  await saveData('members', members);
+  await saveToDB('members', members);
+  updateContributionsAdminList();
+  updatePersonalInfo();
+  updateStats();
   sendNotification('Mise à jour cotisation', `Cotisation ${contributionName} pour ${member.firstname} ${member.lastname} (${year}, ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][monthIndex]}) marquée comme ${paid ? 'payée' : 'non payée'}.`);
 }
 
@@ -527,7 +588,10 @@ function updateEventsAdminList() {
 async function deleteEvent(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   events.splice(index, 1);
-  await saveData('events', events);
+  await saveToDB('events', events);
+  updateEventsList();
+  updateEventsAdminList();
+  updateEventCountdowns();
 }
 
 function updateGalleryContent() {
@@ -556,7 +620,9 @@ function updateGalleryAdminList() {
 async function deleteGalleryItem(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   gallery.splice(index, 1);
-  await saveData('gallery', gallery);
+  await saveToDB('gallery', gallery);
+  updateGalleryContent();
+  updateGalleryAdminList();
 }
 
 function updateMessagesList() {
@@ -589,7 +655,10 @@ function updateMessagesAdminList() {
 async function deleteMessage(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   messages.splice(index, 1);
-  await saveData('messages', messages);
+  await saveToDB('messages', messages);
+  updateMessagesList();
+  updateMessagesAdminList();
+  updateMessagePopups();
 }
 
 function updateMessagePopups() {
@@ -606,7 +675,10 @@ function updateMessagePopups() {
 
 async function closeMessage(index) {
   messages.splice(index, 1);
-  await saveData('messages', messages);
+  await saveToDB('messages', messages);
+  updateMessagesList();
+  updateMessagesAdminList();
+  updateMessagePopups();
 }
 
 function checkAutoMessages() {
@@ -614,9 +686,13 @@ function checkAutoMessages() {
   autoMessages.forEach(async (m, index) => {
     if (new Date(m.datetime) <= now) {
       messages.unshift({ title: m.name, text: m.text, date: now.toISOString() });
-      await saveData('messages', messages);
+      await saveToDB('messages', messages);
       autoMessages.splice(index, 1);
-      await saveData('autoMessages', autoMessages);
+      await saveToDB('autoMessages', autoMessages);
+      updateMessagesList();
+      updateMessagesAdminList();
+      updateMessagePopups();
+      updateAutoMessagesList();
       sendNotification('Message automatisé', `${m.name}: ${m.text}`);
     }
   });
@@ -640,7 +716,8 @@ function updateAutoMessagesList() {
 async function deleteAutoMessage(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   autoMessages.splice(index, 1);
-  await saveData('autoMessages', autoMessages);
+  await saveToDB('autoMessages', autoMessages);
+  updateAutoMessagesList();
 }
 
 function updateNotesList() {
@@ -659,7 +736,8 @@ function updateNotesList() {
 async function deleteNote(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   notes.splice(index, 1);
-  await saveData('notes', notes);
+  await saveToDB('notes', notes);
+  updateNotesList();
 }
 
 function updateInternalDocsList() {
@@ -679,7 +757,8 @@ function updateInternalDocsList() {
 async function deleteInternalDoc(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   internalDocs.splice(index, 1);
-  await saveData('internalDocs', internalDocs);
+  await saveToDB('internalDocs', internalDocs);
+  updateInternalDocsList();
 }
 
 function updatePresidentFilesList() {
@@ -699,7 +778,8 @@ function updatePresidentFilesList() {
 async function deletePresidentFile(index) {
   if (!currentUser || currentUser.role !== 'president') return;
   presidentFiles.splice(index, 1);
-  await saveData('presidentFiles', presidentFiles);
+  await saveToDB('presidentFiles', presidentFiles);
+  updatePresidentFilesList();
 }
 
 function updateSecretaryFilesList() {
@@ -719,7 +799,8 @@ function updateSecretaryFilesList() {
 async function deleteSecretaryFile(index) {
   if (!currentUser || currentUser.role !== 'secretaire') return;
   secretaryFiles.splice(index, 1);
-  await saveData('secretaryFiles', secretaryFiles);
+  await saveToDB('secretaryFiles', secretaryFiles);
+  updateSecretaryFilesList();
 }
 
 function updateSuggestionsList() {
@@ -738,7 +819,8 @@ function updateSuggestionsList() {
 async function deleteSuggestion(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   suggestions.splice(index, 1);
-  await saveData('suggestions', suggestions);
+  await saveToDB('suggestions', suggestions);
+  updateSuggestionsList();
 }
 
 function updateCoranContent() {
@@ -885,12 +967,18 @@ function startCall(type) {
   alert(`${type === 'video' ? 'Appel vidéo' : 'Appel audio'} démarré avec ${selectedCallMembers.length} membre(s).`);
 }
 
-function payViaWave() {
-  window.open('https://pay.wave.com/m/M_sn_dyIw8DZWV46K/c/sn/?amount=2000', '_blank');
-}
-
-function payViaOrangeMoney() {
-  window.open('https://sugu.orange-sonatel.com/mp/dc3PQ0eEeSdcKQWVvcTH2Z', '_blank');
+function payContribution() {
+  const paymentWindow = window.open('', '_blank');
+  paymentWindow.document.write(`
+    <html>
+      <head><title>Paiement Cotisation</title></head>
+      <body>
+        <h2>Choisir un mode de paiement</h2>
+        <a href="https://pay.wave.com/m/M_sn_dyIw8DZWV46K/c/sn/?amount=2000" target="_blank">Payer via Wave</a><br>
+        <a href="https://sugu.orange-sonatel.com/mp/dc3PQ0eEeSdcKQWVvcTH2Z" target="_blank">Payer via Orange Money</a>
+      </body>
+    </html>
+  `);
 }
 
 function sendNotification(title, body) {
@@ -922,70 +1010,21 @@ document.querySelector('#contributions-admin-search').addEventListener('input', 
 document.querySelector('#president-files-search').addEventListener('input', updatePresidentFilesList);
 document.querySelector('#secretary-files-search').addEventListener('input', updateSecretaryFilesList);
 
-function initApp() {
-  syncData('members', members, () => {
-    updateMembersList();
-    updateEditMembersList();
-    updateCallMembersList();
-    updateStats();
-    updatePersonalInfo();
-  });
-  syncData('contributions', contributions, () => {
-    updateContributionsAdminList();
-    updatePersonalInfo();
-    updateStats();
-  });
-  syncData('events', events, () => {
-    updateEventsList();
-    updateEventsAdminList();
-    updateEventCountdowns();
-  });
-  syncData('suggestions', suggestions, updateSuggestionsList);
-  syncData('gallery', gallery, () => {
-    updateGalleryContent();
-    updateGalleryAdminList();
-  });
-  syncData('messages', messages, () => {
-    updateMessagesList();
-    updateMessagesAdminList();
-    updateMessagePopups();
-  });
-  syncData('autoMessages', autoMessages, updateAutoMessagesList);
-  syncData('notes', notes, updateNotesList);
-  syncData('internalDocs', internalDocs, updateInternalDocsList);
-  syncData('presidentFiles', presidentFiles, updatePresidentFilesList);
-  syncData('secretaryFiles', secretaryFiles, updateSecretaryFilesList);
-  syncData('library', library, updateLibraryContent);
-
-  // Initialisation des données par défaut si vides
-  if (members.length === 0) {
-    members.push({
-      code: '001',
-      firstname: 'Mouhamed',
-      lastname: 'Niang',
-      age: 45,
-      dob: '01012000',
-      birthplace: 'Dakar',
-      photo: 'assets/images/default-photo.png',
-      email: 'mouhamed.niang@example.com',
-      activity: 'Président',
-      address: '123 Rue Principale, Dakar',
-      phone: '+221123456789',
-      residence: 'Dakar',
-      role: 'president',
-      status: 'actif',
-      contributions: { 'Mensuelle': { '2023': Array(12).fill(false), '2024': Array(12).fill(false), '2025': Array(12).fill(false) } }
-    });
-    saveData('members', members);
-  }
-  if (contributions.length === 0) {
-    contributions.push({ name: 'Mensuelle', amount: 2000, years: ['2023', '2024', '2025'] });
-    saveData('contributions', contributions);
-  }
-  if (events.length === 0) {
-    events.push({ name: 'Conférence Annuelle', description: 'Conférence 2025', image: 'assets/images/conference.jpg', datetime: '2025-08-17T15:00:00' });
-    saveData('events', events);
-  }
-}
-
-initApp();
+initDB().then(() => {
+  updateMembersList();
+  updateContributionsAdminList();
+  updateEventsList();
+  updateGalleryContent();
+  updateMessagesList();
+  updateAutoMessagesList();
+  updateNotesList();
+  updateInternalDocsList();
+  updatePresidentFilesList();
+  updateSecretaryFilesList();
+  updateSuggestionsList();
+  updateCoranContent();
+  updateLibraryContent();
+  updateStats();
+  updateEventCountdowns();
+  updateMessagePopups();
+});
