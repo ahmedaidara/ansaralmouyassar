@@ -8,13 +8,8 @@ self.addEventListener('install', (event) => {
         '/main.js',
         '/chatbotResponses.js',
         '/assets/images/logo.png',
-        '/assets/images/default-photo.png',
-        '/assets/images/conference.jpg',
         '/assets/images/chatbot-bg.jpg',
-        '/assets/videos/intro.mp4',
-        'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js',
-        'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js',
-        'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js'
+        '/assets/videos/intro.mp4'
       ]);
     })
   );
