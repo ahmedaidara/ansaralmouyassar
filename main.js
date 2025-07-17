@@ -1,15 +1,21 @@
-// Initialize Firebase
+// Import des fonctions nécessaires depuis Firebase
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+
+// Configuration Firebase
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyB7-fXR59CqNMyYgZTDAdBNpMTE_GkcOlA",
+  authDomain: "ansar-93d9e.firebaseapp.com",
+  projectId: "ansar-93d9e",
+  storageBucket: "ansar-93d9e.firebasestorage.app",
+  messagingSenderId: "697623655771",
+  appId: "1:697623655771:web:2487489b5825ab211f567e",
+  measurementId: "G-N3LBBHM2N0"
 };
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+
+// Initialisation de Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
 let currentUser = null;
 let isChatOpen = false;
