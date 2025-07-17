@@ -1,5 +1,8 @@
-let currentUser = null;
-let members = JSON.parse(localStorage.getItem('members')) || [
+const DB_NAME = 'ansar-almouyassar';
+const DB_VERSION = 1;
+let db;
+
+const members = [
   {
     code: '001',
     firstname: 'Mouhamed',
@@ -15,53 +18,97 @@ let members = JSON.parse(localStorage.getItem('members')) || [
     residence: 'Dakar',
     role: 'president',
     status: 'actif',
-    contributions: [
-      { name: 'Mensuelle', amount: 2000, years: { '2023': [false, false, false, false, false, false, false, false, false, false, false, false], '2024': [false, false, false, false, false, false, false, false, false, false, false, false], '2025': [false, false, false, false, false, false, false, false, false, false, false, false] } }
-    ]
+    contributions: { '2023': Array(12).fill(false), '2024': Array(12).fill(false), '2025': Array(12).fill(false) }
   }
 ];
-let contributions = JSON.parse(localStorage.getItem('contributions')) || [
-  { name: 'Mensuelle', amount: 2000, years: ['2023', '2024', '2025'] }
-];
-let suggestions = JSON.parse(localStorage.getItem('suggestions')) || [];
-let gallery = JSON.parse(localStorage.getItem('gallery')) || [];
-let events = JSON.parse(localStorage.getItem('events')) || [];
-let messages = JSON.parse(localStorage.getItem('messages')) || [];
-let autoMessages = JSON.parse(localStorage.getItem('autoMessages')) || [];
-let notes = JSON.parse(localStorage.getItem('notes')) || [];
-let internalDocs = JSON.parse(localStorage.getItem('internalDocs')) || [];
-let presidentFiles = JSON.parse(localStorage.getItem('presidentFiles')) || [];
-let secretaryFiles = JSON.parse(localStorage.getItem('secretaryFiles')) || [];
-let library = JSON.parse(localStorage.getItem('library')) || [
-  { category: 'Fikhs', name: 'Livre de Fikh 1', url: 'assets/books/fikh1.pdf' },
-  { category: 'Hadis', name: 'Sahih Bukhari', url: 'assets/books/hadis1.pdf' },
-  { category: 'Langue', name: 'Apprendre l\'Arabe', url: 'assets/books/langue1.pdf' }
-];
+const contributions = [{ name: 'Mensuelle', amount: 2000, years: ['2023', '2024', '2025'] }];
+const events = [{ name: 'Conférence Annuelle', description: 'Conférence 2025', image: 'assets/images/conference.jpg', datetime: '2025-08-17T15:00:00' }];
+const suggestions = [];
+const gallery = [];
+const messages = [];
+const autoMessages = [];
+const notes = [];
+const internalDocs = [];
+const presidentFiles = [];
+const secretaryFiles = [];
+const library = [];
+const presidentCode = '0000';
+let currentUser = null;
 let isChatOpen = false;
 let selectedCallMembers = [];
-const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-const presidentCode = '0000';
-const validCodes = {
-  admin: ['JESUISMEMBRE66', '33333333', '44444444', '55555555'],
-  tresorier: ['JESUISTRESORIER444', '66666666', '77777777', '88888888'],
-  president: ['PRESIDENT000', '99999999', '11112222', '33334444'],
-  secretaire: ['SECRETAIRE000', '55556666', '77778888', '99990000'],
-  secretEntry: ['ADMIN12301012000', '00000000', '11111111', '22222222']
-};
 
-function saveData() {
-  localStorage.setItem('members', JSON.stringify(members));
-  localStorage.setItem('contributions', JSON.stringify(contributions));
-  localStorage.setItem('suggestions', JSON.stringify(suggestions));
-  localStorage.setItem('gallery', JSON.stringify(gallery));
-  localStorage.setItem('events', JSON.stringify(events));
-  localStorage.setItem('messages', JSON.stringify(messages));
-  localStorage.setItem('autoMessages', JSON.stringify(autoMessages));
-  localStorage.setItem('notes', JSON.stringify(notes));
-  localStorage.setItem('internalDocs', JSON.stringify(internalDocs));
-  localStorage.setItem('presidentFiles', JSON.stringify(presidentFiles));
-  localStorage.setItem('secretaryFiles', JSON.stringify(secretaryFiles));
-  localStorage.setItem('library', JSON.stringify(library));
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (event) => {
+      db = event.target.result;
+      db.createObjectStore('members', { keyPath: 'code' });
+      db.createObjectStore('contributions', { keyPath: 'name' });
+      db.createObjectStore('events', { autoIncrement: true });
+      db.createObjectStore('suggestions', { autoIncrement: true });
+      db.createObjectStore('gallery', { autoIncrement: true });
+      db.createObjectStore('messages', { autoIncrement: true });
+      db.createObjectStore('autoMessages', { autoIncrement: true });
+      db.createObjectStore('notes', { autoIncrement: true });
+      db.createObjectStore('internalDocs', { autoIncrement: true });
+      db.createObjectStore('presidentFiles', { autoIncrement: true });
+      db.createObjectStore('secretaryFiles', { autoIncrement: true });
+      db.createObjectStore('library', { autoIncrement: true });
+    };
+    request.onsuccess = (event) => {
+      db = event.target.result;
+      resolve();
+    };
+    request.onerror = (event) => reject(event.target.error);
+  });
+}
+
+function saveToDB(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = Array.isArray(data) ? data.forEach(item => store.put(item)) : store.put(data);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+function loadFromDB(storeName) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function initDB() {
+  await openDB();
+  const storedMembers = await loadFromDB('members');
+  if (storedMembers.length > 0) members.splice(0, members.length, ...storedMembers);
+  const storedContributions = await loadFromDB('contributions');
+  if (storedContributions.length > 0) contributions.splice(0, contributions.length, ...storedContributions);
+  const storedEvents = await loadFromDB('events');
+  if (storedEvents.length > 0) events.splice(0, events.length, ...storedEvents);
+  const storedSuggestions = await loadFromDB('suggestions');
+  if (storedSuggestions.length > 0) suggestions.splice(0, suggestions.length, ...storedSuggestions);
+  const storedGallery = await loadFromDB('gallery');
+  if (storedGallery.length > 0) gallery.splice(0, gallery.length, ...storedGallery);
+  const storedMessages = await loadFromDB('messages');
+  if (storedMessages.length > 0) messages.splice(0, messages.length, ...storedMessages);
+  const storedAutoMessages = await loadFromDB('autoMessages');
+  if (storedAutoMessages.length > 0) autoMessages.splice(0, autoMessages.length, ...storedAutoMessages);
+  const storedNotes = await loadFromDB('notes');
+  if (storedNotes.length > 0) notes.splice(0, notes.length, ...storedNotes);
+  const storedInternalDocs = await loadFromDB('internalDocs');
+  if (storedInternalDocs.length > 0) internalDocs.splice(0, internalDocs.length, ...storedInternalDocs);
+  const storedPresidentFiles = await loadFromDB('presidentFiles');
+  if (storedPresidentFiles.length > 0) presidentFiles.splice(0, presidentFiles.length, ...storedPresidentFiles);
+  const storedSecretaryFiles = await loadFromDB('secretaryFiles');
+  if (storedSecretaryFiles.length > 0) secretaryFiles.splice(0, secretaryFiles.length, ...storedSecretaryFiles);
+  const storedLibrary = await loadFromDB('library');
+  if (storedLibrary.length > 0) library.splice(0, library.length, ...storedLibrary);
 }
 
 function showPage(pageId) {
@@ -74,14 +121,13 @@ function showPage(pageId) {
   if (pageId === 'gallery') updateGalleryContent();
   if (pageId === 'messages') updateMessagesList();
   if (pageId === 'coran') updateCoranContent();
-  if (pageId === 'library') updateLibraryContent();
   if (pageId === 'personal') {
-    document.querySelector('#personal-login').style.display = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire' ? 'none' : 'block';
-    document.querySelector('#personal-content').style.display = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire' ? 'block' : 'none';
-    if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'tresorier' && currentUser.role !== 'president' && currentUser.role !== 'secretaire') updatePersonalInfo();
+    document.querySelector('#personal-login').style.display = currentUser && currentUser.role !== 'admin' ? 'none' : 'block';
+    document.querySelector('#personal-content').style.display = currentUser && currentUser.role !== 'admin' ? 'block' : 'none';
+    if (currentUser && currentUser.role !== 'admin') updatePersonalInfo();
   }
-  if (pageId === 'president') updatePresidentFilesList();
-  if (pageId === 'secretary') updateSecretaryFilesList();
+  if (pageId === 'library') updateLibraryContent();
+  if (pageId === 'home') updateMessagePopups();
 }
 
 function showTab(tabId) {
@@ -93,98 +139,50 @@ function showTab(tabId) {
   if (tabId === 'gallery-admin') updateGalleryAdminList();
   if (tabId === 'events-admin') updateEventsAdminList();
   if (tabId === 'messages-admin') updateMessagesAdminList();
-  if (tabId === 'auto-messages') updateAutoMessagesList();
   if (tabId === 'notes') updateNotesList();
   if (tabId === 'internal-docs') updateInternalDocsList();
   if (tabId === 'suggestions-admin') updateSuggestionsList();
   if (tabId === 'stats') updateStats();
-  if (tabId === 'video-calls') updateCallMembersList();
-}
-
-function showTreasurerTab(tabId) {
-  document.querySelectorAll('#treasurer .tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelectorAll('#treasurer .tab-button').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`#${tabId}`).classList.add('active');
-  document.querySelector(`button[onclick="showTreasurerTab('${tabId}')"]`).classList.add('active');
-  if (tabId === 'manage-contributions') updateContributionsTreasurerList();
+  if (tabId === 'video-calls') initVideoCall();
+  if (tabId === 'auto-messages') updateAutoMessagesList();
+  if (tabId === 'treasurer') updateContributionsAdminList();
+  if (tabId === 'president') updatePresidentFilesList();
+  if (tabId === 'secretary') updateSecretaryFilesList();
 }
 
 function toggleTheme() {
   document.body.classList.toggle('dark-mode');
 }
 
-function updateEventsCountdown() {
-  const countdownDiv = document.getElementById('events-countdown');
-  countdownDiv.innerHTML = '';
-  events.forEach(event => {
-    const eventDate = new Date(`${event.date}T${event.time}`);
+function updateEventCountdowns() {
+  const countdowns = document.getElementById('event-countdowns');
+  countdowns.innerHTML = events.map(event => {
+    const eventDate = new Date(event.datetime);
     const now = new Date();
     const diff = eventDate - now;
-    let text = '';
     if (diff <= 0 && diff > -30 * 60 * 1000) {
-      text = `Événement "${event.name}" : EN COURS`;
-    } else if (diff > 0) {
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      text = `Événement "${event.name}" : JOUR J - ${days} jours ${hours}h ${minutes}m ${seconds}s`;
+      return `<div id="countdown-${event.name}">Événement ${event.name} : EN COURS</div>`;
+    } else if (diff <= -30 * 60 * 1000) {
+      return '';
     }
-    if (text) {
-      countdownDiv.innerHTML += `<div>${text}</div>`;
-    }
-  });
-  if (!events.length) countdownDiv.innerHTML = '';
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `<div id="countdown-${event.name}">Événement ${event.name} : JOUR J - ${days}j ${hours}h ${minutes}m ${seconds}s</div>`;
+  }).join('');
 }
 
-function checkAutoMessages() {
-  const now = new Date();
-  autoMessages.forEach((msg, index) => {
-    const msgDate = new Date(`${msg.date}T${msg.time}`);
-    if (now >= msgDate && !msg.sent) {
-      messages.push({ title: msg.name, text: msg.text, date: now.toISOString() });
-      msg.sent = true;
-      showMessagePopup(msg.name, msg.text);
-      sendNotification(msg.name, msg.text);
-      updateMessagesList();
-      updateMessagesAdminList();
-      saveData();
-    }
-  });
-}
+setInterval(updateEventCountdowns, 1000);
+setInterval(checkAutoMessages, 60000);
 
-setInterval(() => {
-  updateEventsCountdown();
-  checkAutoMessages();
-  updateContributionsYears();
-}, 1000);
-
-function showMessagePopup(title, content) {
-  document.getElementById('message-popup-title').textContent = title;
-  document.getElementById('message-popup-content').textContent = content;
-  document.getElementById('message-popup').style.display = 'block';
-}
-
-function closeMessagePopup() {
-  document.getElementById('message-popup').style.display = 'none';
-}
-
-function sendNotification(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title, { body });
-  } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        new Notification(title, { body });
-      }
-    });
-  }
-}
+document.querySelector('#settings-language').addEventListener('change', (e) => {
+  // Language change handled in settings
+});
 
 function toggleChatbot() {
   isChatOpen = !isChatOpen;
   document.querySelector('#chatbot').style.display = isChatOpen ? 'block' : 'none';
-  document.querySelector('#secret-entry').style.display = 'none';
   if (isChatOpen) {
     document.querySelector('#chatbot-messages').innerHTML = '<div class="chatbot-message received">Bienvenue ! Posez une question ou utilisez un mot-clé comme "association", "membre", "cotisation", etc.</div>';
   }
@@ -195,11 +193,12 @@ document.querySelector('.chatbot-button').addEventListener('click', toggleChatbo
 document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = document.querySelector('#chatbot-input');
-  const message = input.value.trim();
+  const message = input.value;
   if (!message) return;
   const messages = document.querySelector('#chatbot-messages');
   messages.innerHTML += `<div class="chatbot-message sent">${message}</div>`;
-  if (validCodes.secretEntry.includes(message)) {
+  const secretCodes = ['ADMIN12301012000', '00000000', '11111111', '22222222'];
+  if (secretCodes.includes(message)) {
     document.querySelector('#secret-entry').style.display = 'block';
   } else {
     const response = getChatbotResponse(message);
@@ -211,15 +210,29 @@ document.querySelector('#chatbot-form').addEventListener('submit', (e) => {
 
 function enterSecret() {
   const password = document.querySelector('#secret-password').value;
-  let role = null;
-  if (validCodes.admin.includes(password)) role = 'admin';
-  else if (validCodes.tresorier.includes(password)) role = 'tresorier';
-  else if (validCodes.president.includes(password)) role = 'president';
-  else if (validCodes.secretaire.includes(password)) role = 'secretaire';
-  if (role) {
-    currentUser = { code: 'ADMIN123', role };
+  const adminCodes = ['JESUISMEMBRE66', '33333333', '44444444', '55555555'];
+  const treasurerCodes = ['JESUISTRESORIER444', '66666666', '77777777', '88888888'];
+  const presidentCodes = ['PRESIDENT000', '99999999', '11112222', '33334444'];
+  const secretaryCodes = ['SECRETAIRE000', '55556666', '77778888', '99990000'];
+  if (adminCodes.includes(password)) {
+    currentUser = { code: 'ADMIN123', role: 'admin' };
+    showPage('secret');
     toggleChatbot();
-    showPage(role === 'tresorier' ? 'treasurer' : role === 'president' ? 'president' : role === 'secretaire' ? 'secretary' : 'secret');
+  } else if (treasurerCodes.includes(password)) {
+    currentUser = { code: 'TRESORIER', role: 'tresorier' };
+    showPage('secret');
+    showTab('treasurer');
+    toggleChatbot();
+  } else if (presidentCodes.includes(password)) {
+    currentUser = { code: 'PRESIDENT', role: 'president' };
+    showPage('secret');
+    showTab('president');
+    toggleChatbot();
+  } else if (secretaryCodes.includes(password)) {
+    currentUser = { code: 'SECRETAIRE', role: 'secretaire' };
+    showPage('secret');
+    showTab('secretary');
+    toggleChatbot();
   } else {
     document.querySelector('#chatbot-messages').innerHTML += '<div class="chatbot-message received">Mot de passe incorrect.</div>';
   }
@@ -258,11 +271,11 @@ function logoutPersonal() {
   showPage('home');
 }
 
-document.querySelector('#add-member-form').addEventListener('submit', (e) => {
+document.querySelector('#add-member-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const member = {
-    code: String(members.length + 1).padStart(3, '0'),
+    code: `${(members.length + 1).toString().padStart(3, '0')}`,
     firstname: document.querySelector('#new-member-firstname').value,
     lastname: document.querySelector('#new-member-lastname').value,
     age: parseInt(document.querySelector('#new-member-age').value) || null,
@@ -276,25 +289,24 @@ document.querySelector('#add-member-form').addEventListener('submit', (e) => {
     residence: document.querySelector('#new-member-residence').value || null,
     role: document.querySelector('#new-member-role').value || 'membre',
     status: document.querySelector('#new-member-status').value || 'actif',
-    contributions: contributions.map(c => ({
-      name: c.name,
-      amount: c.amount,
-      years: c.years.reduce((acc, year) => ({ ...acc, [year]: Array(12).fill(false) }), {}),
-      paid: false,
-      partial: 0
+    contributions: Object.fromEntries(contributions.filter(c => c.name === 'Mensuelle').map(c => {
+      const years = {};
+      c.years.forEach(year => {
+        years[year] = Array(12).fill(false);
+      });
+      return [c.name, years];
     }))
   };
   members.push(member);
+  await saveToDB('members', members);
   document.querySelector('#add-member-form').reset();
   updateMembersList();
   updateEditMembersList();
   updateCallMembersList();
-  updateContributionsTreasurerList();
   updateStats();
-  saveData();
 });
 
-document.querySelector('#delete-member-form').addEventListener('submit', (e) => {
+document.querySelector('#delete-member-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = document.querySelector('#delete-member-code').value;
   if (code !== presidentCode) {
@@ -305,187 +317,151 @@ document.querySelector('#delete-member-form').addEventListener('submit', (e) => 
   const index = members.findIndex(m => m.code === memberCode);
   if (index !== -1) {
     members.splice(index, 1);
+    await saveToDB('members', members);
     updateMembersList();
     updateEditMembersList();
     updateCallMembersList();
-    updateContributionsTreasurerList();
     updateStats();
     document.querySelector('#delete-member-form').style.display = 'none';
-    saveData();
   }
 });
 
-document.querySelector('#add-contribution-form').addEventListener('submit', (e) => {
+document.querySelector('#add-contribution-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'tresorier') return;
   const name = document.querySelector('#contribution-name').value;
   const amount = parseInt(document.querySelector('#contribution-amount').value);
-  const years = name === 'Mensuelle' ? contributions.find(c => c.name === 'Mensuelle')?.years || ['2023', '2024', '2025'] : [];
-  contributions.push({ name, amount, years });
+  const currentYear = new Date().getFullYear().toString();
+  const contribution = { name, amount, years: [currentYear] };
+  contributions.push(contribution);
   members.forEach(member => {
-    member.contributions.push({
-      name,
-      amount,
-      years: name === 'Mensuelle' ? years.reduce((acc, year) => ({ ...acc, [year]: Array(12).fill(false) }), {}),
-      paid: false,
-      partial: 0
-    });
+    if (!member.contributions[name]) {
+      member.contributions[name] = { [currentYear]: Array(12).fill(false) };
+    }
   });
+  await saveToDB('contributions', contributions);
+  await saveToDB('members', members);
   document.querySelector('#add-contribution-form').reset();
-  updateContributionsTreasurerList();
+  updateContributionsAdminList();
   updatePersonalInfo();
   updateStats();
-  saveData();
 });
 
-function updateContributionsYears() {
-  const currentYear = new Date().getFullYear().toString();
-  if (!contributions.find(c => c.name === 'Mensuelle')?.years.includes(currentYear)) {
-    contributions.find(c => c.name === 'Mensuelle')?.years.push(currentYear);
-    members.forEach(member => {
-      const monthlyCont = member.contributions.find(c => c.name === 'Mensuelle');
-      if (monthlyCont) monthlyCont.years[currentYear] = Array(12).fill(false);
-    });
-    saveData();
-  }
-}
-
-function payContribution() {
-  const waveLink = 'https://pay.wave.com/m/M_sn_dyIw8DZWV46K/c/sn/?amount=2000';
-  const orangeMoneyLink = 'https://sugu.orange-sonatel.com/mp/dc3PQ0eEeSdcKQWVvcTH2Z';
-  const paymentWindow = window.open('', '_blank');
-  paymentWindow.document.write(`
-    <html>
-      <head><title>Paiement des Cotisations</title></head>
-      <body>
-        <h2>Choisir une méthode de paiement</h2>
-        <a href="${waveLink}" target="_blank" class="link-button">Payer via Wave</a>
-        <a href="${orangeMoneyLink}" target="_blank" class="link-button">Payer via Orange Money</a>
-        <style>
-          body { font-family: 'Roboto', sans-serif; text-align: center; padding: 20px; }
-          .link-button { display: block; margin: 10px; padding: 10px; background: #9b9c28; color: white; text-decoration: none; border-radius: 5px; }
-          .link-button:hover { background: #778152; }
-        </style>
-      </body>
-    </html>
-  `);
-}
-
-document.querySelector('#suggestion-form').addEventListener('submit', (e) => {
+document.querySelector('#suggestion-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser) return;
   const text = document.querySelector('#suggestion-text').value;
-  suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text, date: new Date().toISOString() });
+  suggestions.push({ member: `${currentUser.firstname} ${currentUser.lastname}`, text });
+  await saveToDB('suggestions', suggestions);
   document.querySelector('#suggestion-form').reset();
   updateSuggestionsList();
-  saveData();
 });
 
-document.querySelector('#add-gallery-form').addEventListener('submit', (e) => {
+document.querySelector('#add-gallery-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#gallery-file').files[0];
   if (file) {
     gallery.push({ type: file.type.startsWith('image') ? 'image' : 'video', url: URL.createObjectURL(file), name: file.name });
+    await saveToDB('gallery', gallery);
     document.querySelector('#add-gallery-form').reset();
     updateGalleryContent();
     updateGalleryAdminList();
-    saveData();
   }
 });
 
-document.querySelector('#add-event-form').addEventListener('submit', (e) => {
+document.querySelector('#add-event-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const event = {
     name: document.querySelector('#event-name').value,
-    date: document.querySelector('#event-date').value,
-    time: document.querySelector('#event-time').value,
     description: document.querySelector('#event-description').value,
+    datetime: new Date(`${document.querySelector('#event-date').value}T${document.querySelector('#event-time').value}`).toISOString(),
     image: document.querySelector('#event-file').files[0] ? URL.createObjectURL(document.querySelector('#event-file').files[0]) : ''
   };
   events.push(event);
+  await saveToDB('events', events);
   document.querySelector('#add-event-form').reset();
   updateEventsList();
   updateEventsAdminList();
-  updateEventsCountdown();
-  saveData();
+  updateEventCountdowns();
 });
 
-document.querySelector('#add-message-form').addEventListener('submit', (e) => {
+document.querySelector('#add-message-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const title = document.querySelector('#message-title').value;
   const text = document.querySelector('#message-text').value;
-  messages.push({ title, text, date: new Date().toISOString() });
+  const message = { title, text, date: new Date().toISOString() };
+  messages.unshift(message);
+  await saveToDB('messages', messages);
   document.querySelector('#add-message-form').reset();
-  showMessagePopup(title, text);
-  sendNotification(title, text);
   updateMessagesList();
   updateMessagesAdminList();
-  saveData();
+  updateMessagePopups();
+  sendNotification('Nouveau message', `${title}: ${text}`);
 });
 
-document.querySelector('#add-auto-message-form').addEventListener('submit', (e) => {
+document.querySelector('#add-auto-message-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const autoMessage = {
     name: document.querySelector('#auto-message-name').value,
     text: document.querySelector('#auto-message-text').value,
-    date: document.querySelector('#auto-message-date').value,
-    time: document.querySelector('#auto-message-time').value,
-    sent: false
+    datetime: new Date(`${document.querySelector('#auto-message-date').value}T${document.querySelector('#auto-message-time').value}`).toISOString()
   };
   autoMessages.push(autoMessage);
+  await saveToDB('autoMessages', autoMessages);
   document.querySelector('#add-auto-message-form').reset();
   updateAutoMessagesList();
-  saveData();
 });
 
-document.querySelector('#add-note-form').addEventListener('submit', (e) => {
+document.querySelector('#add-note-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
-  const theme = document.querySelector('#note-theme').value;
-  const text = document.querySelector('#note-text').value;
-  notes.push({ theme, text });
+  const note = {
+    theme: document.querySelector('#note-theme').value,
+    text: document.querySelector('#note-text').value
+  };
+  notes.push(note);
+  await saveToDB('notes', notes);
   document.querySelector('#add-note-form').reset();
   updateNotesList();
-  saveData();
 });
 
-document.querySelector('#add-internal-doc-form').addEventListener('submit', (e) => {
+document.querySelector('#add-internal-doc-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'admin') return;
   const file = document.querySelector('#internal-doc').files[0];
   if (file) {
-    internalDocs.push({ category: document.querySelector('#internal-doc-category').value, name: file.name, url: URL.createObjectURL(file) });
+    internalDocs.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#internal-doc-category').value });
+    await saveToDB('internalDocs', internalDocs);
     document.querySelector('#add-internal-doc-form').reset();
     updateInternalDocsList();
-    saveData();
   }
 });
 
-document.querySelector('#add-president-file-form').addEventListener('submit', (e) => {
+document.querySelector('#add-president-file-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'president') return;
   const file = document.querySelector('#president-file').files[0];
   if (file) {
-    presidentFiles.push({ category: document.querySelector('#president-file-category').value, name: file.name, url: URL.createObjectURL(file) });
+    presidentFiles.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#president-file-category').value });
+    await saveToDB('presidentFiles', presidentFiles);
     document.querySelector('#add-president-file-form').reset();
     updatePresidentFilesList();
-    saveData();
   }
 });
 
-document.querySelector('#add-secretary-file-form').addEventListener('submit', (e) => {
+document.querySelector('#add-secretary-file-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUser || currentUser.role !== 'secretaire') return;
   const file = document.querySelector('#secretary-file').files[0];
   if (file) {
-    secretaryFiles.push({ category: document.querySelector('#secretary-file-category').value, name: file.name, url: URL.createObjectURL(file) });
+    secretaryFiles.push({ name: file.name, url: URL.createObjectURL(file), category: document.querySelector('#secretary-file-category').value });
+    await saveToDB('secretaryFiles', secretaryFiles);
     document.querySelector('#add-secretary-file-form').reset();
     updateSecretaryFilesList();
-    saveData();
   }
 });
 
@@ -502,64 +478,42 @@ function updateMembersList() {
     `).join('');
 }
 
-function updateContributionsTreasurerList() {
-  const search = document.querySelector('#contributions-treasurer-search').value.toLowerCase();
-  const list = document.querySelector('#contributions-treasurer-list');
-  list.innerHTML = members
-    .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
-    .map(m => `
+function updateContributionsAdminList() {
+  if (!currentUser || currentUser.role !== 'tresorier') return;
+  const search = document.querySelector('#contributions-admin-search').value.toLowerCase();
+  const list = document.querySelector('#contributions-admin-list');
+  list.innerHTML = contributions
+    .filter(c => c.name.toLowerCase().includes(search))
+    .map(c => `
       <div class="contribution-card">
-        <h4>${m.firstname} ${m.lastname} (${m.code})</h4>
-        ${contributions.map(c => `
+        <h4>${c.name} (${c.amount} FCFA)</h4>
+        ${members.map(m => `
           <div>
-            <h5>${c.name} (${c.amount} FCFA)</h5>
-            ${c.name === 'Mensuelle' ? c.years.map(year => `
-              <p>${year}</p>
-              ${months.map((month, index) => `
-                <input type="checkbox" id="payment-${m.code}-${year}-${index}" ${m.contributions.find(cont => cont.name === c.name).years[year][index] ? 'checked' : ''} onchange="updateMonthlyPayment('${m.code}', '${year}', ${index}, this.checked)">
-                <label for="payment-${m.code}-${year}-${index}">${month}</label>
+            <p>${m.firstname} ${m.lastname}</p>
+            ${c.years.map(year => `
+              <h5>${year}</h5>
+              ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map((month, i) => `
+                <input type="checkbox" ${m.contributions[c.name][year][i] ? 'checked' : ''} onchange="updateMonthlyPayment('${m.code}', '${c.name}', '${year}', ${i}, this.checked)">
+                <label>${month}</label>
               `).join('')}
-            `).join('') : `
-              <input type="checkbox" id="payment-${m.code}-${c.name}" ${m.contributions.find(cont => cont.name === c.name).paid ? 'checked' : ''} onchange="updatePayment('${m.code}', '${c.name}', this.checked)">
-              <label for="payment-${m.code}-${c.name}">Payé</label>
-              <input type="number" placeholder="Montant partiel" value="${m.contributions.find(cont => cont.name === c.name).partial || 0}" onchange="updatePartialPayment('${m.code}', '${c.name}', this.value)">
-              <p>Statut: ${m.contributions.find(cont => cont.name === c.name).paid ? 'Payé' : `Non payé (${m.contributions.find(cont => cont.name === c.name).partial || 0} FCFA)`}</p>
-            `}
+              <p>Payé: ${m.contributions[c.name][year].map((p, i) => p ? ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][i] : '').filter(Boolean).join(', ')}</p>
+              <p>Non payé: ${m.contributions[c.name][year].map((p, i) => !p ? ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][i] : '').filter(Boolean).join(', ')}</p>
+            `).join('')}
           </div>
         `).join('')}
       </div>
     `).join('');
 }
 
-function updateMonthlyPayment(memberCode, year, monthIndex, paid) {
+async function updateMonthlyPayment(memberCode, contributionName, year, monthIndex, paid) {
   if (!currentUser || currentUser.role !== 'tresorier') return;
   const member = members.find(m => m.code === memberCode);
-  member.contributions.find(c => c.name === 'Mensuelle').years[year][monthIndex] = paid;
-  updateContributionsTreasurerList();
+  member.contributions[contributionName][year][monthIndex] = paid;
+  await saveToDB('members', members);
+  updateContributionsAdminList();
   updatePersonalInfo();
   updateStats();
-  saveData();
-}
-
-function updatePayment(memberCode, contributionName, paid) {
-  if (!currentUser || currentUser.role !== 'tresorier') return;
-  const member = members.find(m => m.code === memberCode);
-  member.contributions.find(c => c.name === contributionName).paid = paid;
-  if (paid) member.contributions.find(c => c.name === contributionName).partial = 0;
-  updateContributionsTreasurerList();
-  updatePersonalInfo();
-  updateStats();
-  saveData();
-}
-
-function updatePartialPayment(memberCode, contributionName, amount) {
-  if (!currentUser || currentUser.role !== 'tresorier') return;
-  const member = members.find(m => m.code === memberCode);
-  member.contributions.find(c => c.name === contributionName).partial = parseInt(amount) || 0;
-  updateContributionsTreasurerList();
-  updatePersonalInfo();
-  updateStats();
-  saveData();
+  sendNotification('Mise à jour cotisation', `Cotisation ${contributionName} pour ${member.firstname} ${member.lastname} (${year}, ${['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][monthIndex]}) marquée comme ${paid ? 'payée' : 'non payée'}.`);
 }
 
 function updateEditMembersList() {
@@ -609,7 +563,7 @@ function updateEventsList() {
       <div class="event-card">
         <h4>${e.name}</h4>
         <p>${e.description}</p>
-        <p>Date: ${e.date} ${e.time}</p>
+        <p>Date: ${new Date(e.datetime).toLocaleString()}</p>
         ${e.image ? `<img src="${e.image}" alt="${e.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
       </div>
     `).join('');
@@ -624,20 +578,20 @@ function updateEventsAdminList() {
       <div class="event-card">
         <h4>${e.name}</h4>
         <p>${e.description}</p>
-        <p>Date: ${e.date} ${e.time}</p>
+        <p>Date: ${new Date(e.datetime).toLocaleString()}</p>
         ${e.image ? `<img src="${e.image}" alt="${e.name}" style="max-width: 100%; border-radius: 10px;">` : ''}
         <button class="cta-button" onclick="deleteEvent(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteEvent(index) {
+async function deleteEvent(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   events.splice(index, 1);
+  await saveToDB('events', events);
   updateEventsList();
   updateEventsAdminList();
-  updateEventsCountdown();
-  saveData();
+  updateEventCountdowns();
 }
 
 function updateGalleryContent() {
@@ -651,8 +605,10 @@ function updateGalleryContent() {
 }
 
 function updateGalleryAdminList() {
+  const search = document.querySelector('#gallery-admin-search').value.toLowerCase();
   const list = document.querySelector('#gallery-admin-list');
   list.innerHTML = gallery
+    .filter(g => g.name.toLowerCase().includes(search))
     .map((g, index) => `
       <div>
         ${g.type === 'image' ? `<img src="${g.url}" alt="Galerie" style="max-width: 100%; border-radius: 10px;">` : `<video src="${g.url}" controls style="max-width: 100%; border-radius: 10px;"></video>`}
@@ -661,18 +617,17 @@ function updateGalleryAdminList() {
     `).join('');
 }
 
-function deleteGalleryItem(index) {
+async function deleteGalleryItem(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   gallery.splice(index, 1);
+  await saveToDB('gallery', gallery);
   updateGalleryContent();
   updateGalleryAdminList();
-  saveData();
 }
 
 function updateMessagesList() {
   const list = document.querySelector('#messages-list');
   list.innerHTML = messages
-    .slice().reverse()
     .map(m => `
       <div class="message-card">
         <h4>${m.title}</h4>
@@ -683,9 +638,10 @@ function updateMessagesList() {
 }
 
 function updateMessagesAdminList() {
+  const search = document.querySelector('#messages-admin-search').value.toLowerCase();
   const list = document.querySelector('#messages-admin-list');
   list.innerHTML = messages
-    .slice().reverse()
+    .filter(m => m.title.toLowerCase().includes(search) || m.text.toLowerCase().includes(search))
     .map((m, index) => `
       <div class="message-card">
         <h4>${m.title}</h4>
@@ -696,12 +652,50 @@ function updateMessagesAdminList() {
     `).join('');
 }
 
-function deleteMessage(index) {
+async function deleteMessage(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   messages.splice(index, 1);
+  await saveToDB('messages', messages);
   updateMessagesList();
   updateMessagesAdminList();
-  saveData();
+  updateMessagePopups();
+}
+
+function updateMessagePopups() {
+  const popups = document.querySelector('#message-popups');
+  popups.innerHTML = messages
+    .map((m, index) => `
+      <div class="message-popup">
+        <h4>${m.title}</h4>
+        <p>${m.text}</p>
+        <button class="close-button" onclick="closeMessage(${index})"><span class="material-icons">close</span></button>
+      </div>
+    `).join('');
+}
+
+async function closeMessage(index) {
+  messages.splice(index, 1);
+  await saveToDB('messages', messages);
+  updateMessagesList();
+  updateMessagesAdminList();
+  updateMessagePopups();
+}
+
+function checkAutoMessages() {
+  const now = new Date();
+  autoMessages.forEach(async (m, index) => {
+    if (new Date(m.datetime) <= now) {
+      messages.unshift({ title: m.name, text: m.text, date: now.toISOString() });
+      await saveToDB('messages', messages);
+      autoMessages.splice(index, 1);
+      await saveToDB('autoMessages', autoMessages);
+      updateMessagesList();
+      updateMessagesAdminList();
+      updateMessagePopups();
+      updateAutoMessagesList();
+      sendNotification('Message automatisé', `${m.name}: ${m.text}`);
+    }
+  });
 }
 
 function updateAutoMessagesList() {
@@ -713,18 +707,17 @@ function updateAutoMessagesList() {
       <div class="message-card">
         <h4>${m.name}</h4>
         <p>${m.text}</p>
-        <p>Date: ${m.date} ${m.time}</p>
-        <p>Statut: ${m.sent ? 'Envoyé' : 'En attente'}</p>
+        <p>Date: ${new Date(m.datetime).toLocaleString()}</p>
         <button class="cta-button" onclick="deleteAutoMessage(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteAutoMessage(index) {
+async function deleteAutoMessage(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   autoMessages.splice(index, 1);
+  await saveToDB('autoMessages', autoMessages);
   updateAutoMessagesList();
-  saveData();
 }
 
 function updateNotesList() {
@@ -734,98 +727,80 @@ function updateNotesList() {
     .filter(n => n.theme.toLowerCase().includes(search) || n.text.toLowerCase().includes(search))
     .map((n, index) => `
       <div class="note-card">
-        <h4>${n.theme}</h4>
-        <p>${n.text}</p>
+        <p><strong>${n.theme}</strong>: ${n.text}</p>
         <button class="cta-button" onclick="deleteNote(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteNote(index) {
+async function deleteNote(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   notes.splice(index, 1);
+  await saveToDB('notes', notes);
   updateNotesList();
-  saveData();
 }
 
 function updateInternalDocsList() {
   const search = document.querySelector('#internal-docs-search').value.toLowerCase();
   const list = document.querySelector('#internal-docs-list');
   list.innerHTML = internalDocs
-    .filter(d => d.category.toLowerCase().includes(search) || d.name.toLowerCase().includes(search))
+    .filter(d => d.name.toLowerCase().includes(search) || d.category.toLowerCase().includes(search))
     .map((d, index) => `
       <div class="file-card">
         <p><strong>Catégorie :</strong> ${d.category}</p>
-        <p><strong>Nom :</strong> ${d.name}</p>
-        <a href="${d.url}" target="_blank">Ouvrir</a>
+        <a href="${d.url}" download>${d.name}</a>
         <button class="cta-button" onclick="deleteInternalDoc(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteInternalDoc(index) {
+async function deleteInternalDoc(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   internalDocs.splice(index, 1);
+  await saveToDB('internalDocs', internalDocs);
   updateInternalDocsList();
-  saveData();
 }
 
 function updatePresidentFilesList() {
   const search = document.querySelector('#president-files-search').value.toLowerCase();
   const list = document.querySelector('#president-files-list');
   list.innerHTML = presidentFiles
-    .filter(f => f.category.toLowerCase().includes(search) || f.name.toLowerCase().includes(search))
+    .filter(f => f.name.toLowerCase().includes(search) || f.category.toLowerCase().includes(search))
     .map((f, index) => `
       <div class="file-card">
         <p><strong>Catégorie :</strong> ${f.category}</p>
-        <p><strong>Nom :</strong> ${f.name}</p>
-        <a href="${f.url}" target="_blank">Ouvrir</a>
+        <a href="${f.url}" download>${f.name}</a>
         <button class="cta-button" onclick="deletePresidentFile(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deletePresidentFile(index) {
+async function deletePresidentFile(index) {
   if (!currentUser || currentUser.role !== 'president') return;
   presidentFiles.splice(index, 1);
+  await saveToDB('presidentFiles', presidentFiles);
   updatePresidentFilesList();
-  saveData();
 }
 
 function updateSecretaryFilesList() {
   const search = document.querySelector('#secretary-files-search').value.toLowerCase();
   const list = document.querySelector('#secretary-files-list');
   list.innerHTML = secretaryFiles
-    .filter(f => f.category.toLowerCase().includes(search) || f.name.toLowerCase().includes(search))
+    .filter(f => f.name.toLowerCase().includes(search) || f.category.toLowerCase().includes(search))
     .map((f, index) => `
       <div class="file-card">
         <p><strong>Catégorie :</strong> ${f.category}</p>
-        <p><strong>Nom :</strong> ${f.name}</p>
-        <a href="${f.url}" target="_blank">Ouvrir</a>
+        <a href="${f.url}" download>${f.name}</a>
         <button class="cta-button" onclick="deleteSecretaryFile(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteSecretaryFile(index) {
+async function deleteSecretaryFile(index) {
   if (!currentUser || currentUser.role !== 'secretaire') return;
   secretaryFiles.splice(index, 1);
+  await saveToDB('secretaryFiles', secretaryFiles);
   updateSecretaryFilesList();
-  saveData();
-}
-
-function updateLibraryContent() {
-  const search = document.querySelector('#library-search').value.toLowerCase();
-  const content = document.querySelector('#library-content');
-  content.innerHTML = library
-    .filter(l => l.category.toLowerCase().includes(search) || l.name.toLowerCase().includes(search))
-    .map(l => `
-      <div class="file-card">
-        <p><strong>Catégorie :</strong> ${l.category}</p>
-        <p><strong>Nom :</strong> ${l.name}</p>
-        <a href="${l.url}" target="_blank">Ouvrir</a>
-      </div>
-    `).join('');
 }
 
 function updateSuggestionsList() {
@@ -835,101 +810,108 @@ function updateSuggestionsList() {
     .filter(s => s.member.toLowerCase().includes(search) || s.text.toLowerCase().includes(search))
     .map((s, index) => `
       <div class="suggestion-card">
-        <p><strong>Membre :</strong> ${s.member}</p>
-        <p>${s.text}</p>
-        <p><small>${new Date(s.date).toLocaleString()}</small></p>
+        <p><strong>${s.member}</strong>: ${s.text}</p>
         <button class="cta-button" onclick="deleteSuggestion(${index})">Supprimer</button>
       </div>
     `).join('');
 }
 
-function deleteSuggestion(index) {
+async function deleteSuggestion(index) {
   if (!currentUser || currentUser.role !== 'admin') return;
   suggestions.splice(index, 1);
+  await saveToDB('suggestions', suggestions);
   updateSuggestionsList();
-  saveData();
-}
-
-function updatePersonalInfo() {
-  if (!currentUser) return;
-  const info = document.querySelector('#personal-info');
-  const contributionsDiv = document.querySelector('#personal-contributions');
-  info.innerHTML = `
-    <p><strong>Prénom :</strong> ${currentUser.firstname}</p>
-    <p><strong>Nom :</strong> ${currentUser.lastname}</p>
-    <p><strong>Numéro :</strong> ${currentUser.code}</p>
-    ${currentUser.email ? `<p><strong>Email :</strong> ${currentUser.email}</p>` : ''}
-    ${currentUser.phone ? `<p><strong>Téléphone :</strong> ${currentUser.phone}</p>` : ''}
-    ${currentUser.address ? `<p><strong>Adresse :</strong> ${currentUser.address}</p>` : ''}
-    ${currentUser.activity ? `<p><strong>Activité :</strong> ${currentUser.activity}</p>` : ''}
-  `;
-  contributionsDiv.innerHTML = currentUser.contributions.map(c => `
-    <div class="contribution-card">
-      <h4>${c.name} (${c.amount} FCFA)</h4>
-      ${c.name === 'Mensuelle' ? Object.keys(c.years).map(year => `
-        <p>${year} - Payé: ${c.years[year].map((paid, i) => paid ? months[i] : '').filter(m => m).join(', ') || 'Aucun'}</p>
-        <p>${year} - Non payé: ${c.years[year].map((paid, i) => !paid ? months[i] : '').filter(m => m).join(', ') || 'Aucun'}</p>
-      `).join('') : `
-        <p>Statut: ${c.paid ? 'Payé' : `Non payé (${c.partial || 0} FCFA)`}</p>
-      `}
-    </div>
-  `).join('');
 }
 
 function updateCoranContent() {
   const search = document.querySelector('#coran-search').value.toLowerCase();
   const content = document.querySelector('#coran-content');
-  content.innerHTML = Array.from({ length: 30 }, (_, i) => i + 1)
-    .filter(j => `juz ${j}`.includes(search))
-    .map(j => `
+  content.innerHTML = Array(30).fill()
+    .map((_, i) => ({ juz: `Juz' ${i + 1}`, id: i + 1 }))
+    .filter(j => j.juz.toLowerCase().includes(search))
+    .map(j => `<p style="font-family: 'Amiri', serif; font-size: 1.2rem;">${j.juz}</p>`).join('');
+}
+
+function updateLibraryContent() {
+  const search = document.querySelector('#library-search').value.toLowerCase();
+  const content = document.querySelector('#library-content');
+  content.innerHTML = library
+    .filter(l => l.name.toLowerCase().includes(search) || l.category.toLowerCase().includes(search))
+    .map(l => `
       <div class="file-card">
-        <p><strong>Juz ${j}</strong></p>
-        <a href="assets/coran/juz${j}.pdf" target="_blank">Ouvrir</a>
+        <p><strong>Catégorie :</strong> ${l.category}</p>
+        <a href="${l.url}" download>${l.name}</a>
       </div>
     `).join('');
 }
 
+function updatePersonalInfo() {
+  if (!currentUser) return;
+  const info = document.querySelector('#personal-info');
+  const contributions = document.querySelector('#personal-contributions');
+  info.innerHTML = `
+    <img src="${currentUser.photo}" alt="${currentUser.firstname} ${currentUser.lastname}" style="width: 100px; border-radius: 50%;">
+    <p><strong>Prénom :</strong> ${currentUser.firstname}</p>
+    <p><strong>Nom :</strong> ${currentUser.lastname}</p>
+    ${currentUser.age ? `<p><strong>Âge :</strong> ${currentUser.age}</p>` : ''}
+    ${currentUser.dob ? `<p><strong>Date de naissance :</strong> ${currentUser.dob}</p>` : ''}
+    ${currentUser.birthplace ? `<p><strong>Lieu de naissance :</strong> ${currentUser.birthplace}</p>` : ''}
+    ${currentUser.email ? `<p><strong>Email :</strong> ${currentUser.email}</p>` : ''}
+    ${currentUser.activity ? `<p><strong>Activité :</strong> ${currentUser.activity}</p>` : ''}
+    ${currentUser.address ? `<p><strong>Adresse :</strong> ${currentUser.address}</p>` : ''}
+    ${currentUser.phone ? `<p><strong>Téléphone :</strong> ${currentUser.phone}</p>` : ''}
+    ${currentUser.residence ? `<p><strong>Résidence :</strong> ${currentUser.residence}</p>` : ''}
+    <p><strong>Rôle :</strong> ${currentUser.role}</p>
+    <p><strong>Statut :</strong> ${currentUser.status}</p>
+  `;
+  contributions.innerHTML = Object.entries(currentUser.contributions).map(([name, years]) => `
+    <div class="contribution-card">
+      <p><strong>${name}</strong>: ${contributions.find(c => c.name === name).amount} FCFA</p>
+      ${Object.entries(years).map(([year, months]) => `
+        <p><strong>${year}</strong></p>
+        <p>Payé: ${months.map((p, i) => p ? ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][i] : '').filter(Boolean).join(', ')}</p>
+        <p>Non payé: ${months.map((p, i) => !p ? ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][i] : '').filter(Boolean).join(', ')}</p>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
 function updateStats() {
-  const totalAmount = members.reduce((sum, m) => sum + m.contributions.reduce((s, c) => s + (c.name === 'Mensuelle' ? Object.values(c.years).flat().filter(p => p).length * c.amount : c.paid ? c.amount : c.partial || 0), 0), 0);
-  const membersByStatus = members.reduce((acc, m) => ({ ...acc, [m.status]: (acc[m.status] || 0) + 1 }), {});
-  const contributionsByYear = contributions.find(c => c.name === 'Mensuelle')?.years.reduce((acc, year) => ({
-    ...acc,
-    [year]: members.reduce((sum, m) => sum + m.contributions.find(c => c.name === 'Mensuelle').years[year].filter(p => p).length, 0)
-  }), {}) || {};
+  const totalAmount = members.reduce((sum, m) => sum + Object.values(m.contributions).reduce((s, years) => s + Object.values(years).reduce((t, months) => t + months.filter(p => p).length * contributions.find(c => c.name === Object.keys(m.contributions)[0]).amount, 0), 0), 0);
+  const membersCount = members.length;
+  const activeMembers = members.filter(m => m.status === 'actif').length;
+  const upToDateMembers = members.filter(m => Object.values(m.contributions).every(years => Object.values(years).every(months => months.every(p => p)))).length;
 
   new Chart(document.getElementById('stats-total-amount'), {
     type: 'bar',
     data: {
-      labels: ['Montant Total'],
-      datasets: [{ label: 'FCFA', data: [totalAmount], backgroundColor: '#9b9c28' }]
-    },
-    options: { scales: { y: { beginAtZero: true } } }
+      labels: ['Somme totale'],
+      datasets: [{ label: 'Montant (FCFA)', data: [totalAmount], backgroundColor: '#9b9c28' }]
+    }
   });
 
   new Chart(document.getElementById('stats-members'), {
     type: 'pie',
     data: {
-      labels: ['Actif', 'Inactif', 'Liste noire'],
-      datasets: [{ data: [membersByStatus.actif || 0, membersByStatus.inactif || 0, membersByStatus['liste-noire'] || 0], backgroundColor: ['#9b9c28', '#778152', '#3a6241'] }]
+      labels: ['Membres'],
+      datasets: [{ data: [membersCount], backgroundColor: ['#3a6241'] }]
     }
   });
 
   new Chart(document.getElementById('stats-status'), {
-    type: 'bar',
+    type: 'pie',
     data: {
-      labels: ['Actif', 'Inactif', 'Liste noire'],
-      datasets: [{ label: 'Membres', data: [membersByStatus.actif || 0, membersByStatus.inactif || 0, membersByStatus['liste-noire'] || 0], backgroundColor: '#9b9c28' }]
-    },
-    options: { scales: { y: { beginAtZero: true } } }
+      labels: ['Actifs', 'Inactifs', 'Liste noire'],
+      datasets: [{ data: [activeMembers, membersCount - activeMembers - members.filter(m => m.status === 'liste-noire').length, members.filter(m => m.status === 'liste-noire').length], backgroundColor: ['#3a6241', '#778152', '#9b9c28'] }]
+    }
   });
 
   new Chart(document.getElementById('stats-contributions'), {
     type: 'bar',
     data: {
-      labels: Object.keys(contributionsByYear),
-      datasets: [{ label: 'Cotisations Mensuelles', data: Object.values(contributionsByYear), backgroundColor: '#9b9c28' }]
-    },
-    options: { scales: { y: { beginAtZero: true } } }
+      labels: ['À jour', 'En retard'],
+      datasets: [{ label: 'Membres', data: [upToDateMembers, membersCount - upToDateMembers], backgroundColor: ['#3a6241', '#9b9c28'] }]
+    }
   });
 }
 
@@ -940,13 +922,13 @@ function updateCallMembersList() {
     .filter(m => `${m.firstname} ${m.lastname}`.toLowerCase().includes(search) || m.code.toLowerCase().includes(search))
     .map(m => `
       <div class="member-card">
-        <input type="checkbox" id="call-${m.code}" value="${m.code}" onchange="toggleCallMember('${m.code}', this.checked)">
+        <input type="checkbox" id="call-${m.code}" value="${m.code}" onchange="updateSelectedCallMembers('${m.code}', this.checked)">
         <label for="call-${m.code}">${m.firstname} ${m.lastname} (${m.code})</label>
       </div>
     `).join('');
 }
 
-function toggleCallMember(code, checked) {
+function updateSelectedCallMembers(code, checked) {
   if (checked) {
     selectedCallMembers.push(code);
   } else {
@@ -954,29 +936,95 @@ function toggleCallMember(code, checked) {
   }
 }
 
-function toggleCallAll(checked) {
-  selectedCallMembers = checked ? members.map(m => m.code) : [];
+function toggleCallAll() {
+  const checkAll = document.querySelector('#call-all').checked;
+  selectedCallMembers = checkAll ? members.map(m => m.code) : [];
+  document.querySelectorAll('#members-call-list input[type=checkbox]').forEach(checkbox => {
+    checkbox.checked = checkAll;
+  });
+}
+
+function initVideoCall() {
+  if (!currentUser || !['admin', 'tresorier', 'president', 'secretaire'].includes(currentUser.role)) {
+    document.querySelector('#video-call-container').innerHTML = '<p>Accès réservé aux membres du bureau.</p>';
+    return;
+  }
   updateCallMembersList();
+  document.querySelector('#video-call-container').innerHTML = '<p>Sélectionnez les membres à appeler ou cochez "Cocher tout".</p>';
 }
 
 function startCall(type) {
-  if (!selectedCallMembers.length) {
+  if (!currentUser || !['admin', 'tresorier', 'president', 'secretaire'].includes(currentUser.role)) return;
+  if (selectedCallMembers.length === 0) {
     alert('Veuillez sélectionner au moins un membre.');
     return;
   }
-  const container = document.querySelector('#video-call-container');
-  container.innerHTML = '';
-  const room = document.createElement('where-by');
-  room.setAttribute('room', 'https://ansar.whereby.com/conference');
-  room.setAttribute('displayName', currentUser ? `${currentUser.firstname} ${currentUser.lastname}` : 'Invité');
-  room.setAttribute('audio', type === 'audio' ? 'true' : 'false');
-  room.setAttribute('video', type === 'video' ? 'true' : 'false');
-  container.appendChild(room);
+  const roomId = `ansar-room-${Date.now()}`;
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmFwcGVhci5pbiIsImF1ZCI6Imh0dHBzOi8vYXBpLmFwcGVhci5pbi92MSIsImV4cCI6OTAwNzE5OTI1NDc0MDk5MSwiaWF0IjoxNzUyNzQzMzY5LCJvcmdhbml6YXRpb25JZCI6MzIwMzY3LCJqdGkiOiJmYzdmMjhiYS0xZTViLTRhYjAtOGQwZi1kZWNjNzAxYzkyNzAifQ.2WXwlPQj_-Da17X3IXJrVFYfiAsGlxzaRftPiG5oFWI';
+  const videoCallContainer = document.querySelector('#video-call-container');
+  const roomUrl = `https://ansar-almouyassar.whereby.com/${roomId}?token=${token}&${type === 'audio' ? 'audioOnly=true' : ''}&displayName=${currentUser.firstname || 'Admin'} ${currentUser.lastname || ''}`;
+  videoCallContainer.innerHTML = `<whereby-embed room="${roomUrl}"></whereby-embed>`;
+  alert(`${type === 'video' ? 'Appel vidéo' : 'Appel audio'} démarré avec ${selectedCallMembers.length} membre(s).`);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  showPage('home');
-  updateEventsCountdown();
-  checkAutoMessages();
-  updateContributionsYears();
+function payContribution() {
+  const paymentWindow = window.open('', '_blank');
+  paymentWindow.document.write(`
+    <html>
+      <head><title>Paiement Cotisation</title></head>
+      <body>
+        <h2>Choisir un mode de paiement</h2>
+        <a href="https://pay.wave.com/m/M_sn_dyIw8DZWV46K/c/sn/?amount=2000" target="_blank">Payer via Wave</a><br>
+        <a href="https://sugu.orange-sonatel.com/mp/dc3PQ0eEeSdcKQWVvcTH2Z" target="_blank">Payer via Orange Money</a>
+      </body>
+    </html>
+  `);
+}
+
+function sendNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body });
+  } else if ('Notification' in window) {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, { body });
+      }
+    });
+  }
+}
+
+document.querySelector('#members-search').addEventListener('input', updateMembersList);
+document.querySelector('#events-search').addEventListener('input', updateEventsList);
+document.querySelector('#coran-search').addEventListener('input', updateCoranContent);
+document.querySelector('#library-search').addEventListener('input', updateLibraryContent);
+document.querySelector('#edit-member-search').addEventListener('input', updateEditMembersList);
+document.querySelector('#gallery-admin-search').addEventListener('input', updateGalleryAdminList);
+document.querySelector('#events-admin-search').addEventListener('input', updateEventsAdminList);
+document.querySelector('#messages-admin-search').addEventListener('input', updateMessagesAdminList);
+document.querySelector('#notes-search').addEventListener('input', updateNotesList);
+document.querySelector('#internal-docs-search').addEventListener('input', updateInternalDocsList);
+document.querySelector('#suggestions-search').addEventListener('input', updateSuggestionsList);
+document.querySelector('#video-calls-search').addEventListener('input', updateCallMembersList);
+document.querySelector('#auto-messages-search').addEventListener('input', updateAutoMessagesList);
+document.querySelector('#contributions-admin-search').addEventListener('input', updateContributionsAdminList);
+document.querySelector('#president-files-search').addEventListener('input', updatePresidentFilesList);
+document.querySelector('#secretary-files-search').addEventListener('input', updateSecretaryFilesList);
+
+initDB().then(() => {
+  updateMembersList();
+  updateContributionsAdminList();
+  updateEventsList();
+  updateGalleryContent();
+  updateMessagesList();
+  updateAutoMessagesList();
+  updateNotesList();
+  updateInternalDocsList();
+  updatePresidentFilesList();
+  updateSecretaryFilesList();
+  updateSuggestionsList();
+  updateCoranContent();
+  updateLibraryContent();
+  updateStats();
+  updateEventCountdowns();
+  updateMessagePopups();
 });
