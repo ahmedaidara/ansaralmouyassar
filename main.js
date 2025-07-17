@@ -1,8 +1,3 @@
-// Import des fonctions nécessaires depuis Firebase
-import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
-
-// Configuration Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyB7-fXR59CqNMyYgZTDAdBNpMTE_GkcOlA",
   authDomain: "ansar-93d9e.firebaseapp.com",
@@ -12,10 +7,6 @@ const firebaseConfig = {
   appId: "1:697623655771:web:2487489b5825ab211f567e",
   measurementId: "G-N3LBBHM2N0"
 };
-
-// Initialisation de Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
 
 let currentUser = null;
 let isChatOpen = false;
