@@ -10,8 +10,11 @@
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/@whereby.com/browser-sdk"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js"></script>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+  import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
+  import './main.js';
+</script>
 </head>
 <body>
   <header>
