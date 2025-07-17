@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Amiri&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/@whereby.com/browser-sdk"></script>
 </head>
 <body>
   <header>
@@ -32,26 +33,13 @@
           Votre navigateur ne supporte pas la vidéo.
         </video>
         <div id="countdown">JOUR J - 17 jours 15h 23m 41s</div>
-        <button class="cta-button" onclick="showPage('login')">Se connecter</button>
       </div>
-    </section>
-
-    <!-- Page de connexion (pour le bureau) -->
-    <section id="login" class="page">
-      <h2>Connexion (Bureau)</h2>
-      <form id="login-form">
-        <label for="member-code">Numéro de Membre</label>
-        <input type="text" id="member-code" placeholder="Ex. : ADMIN123" required>
-        <label for="password">Mot de passe</label>
-        <input type="password" id="password" placeholder="Ex. : 01012000" required>
-        <button type="submit" class="cta-button">Se connecter</button>
-      </form>
-      <p id="error-message" style="color: red; display: none;"></p>
     </section>
 
     <!-- Page des membres (publique) -->
     <section id="members" class="page">
       <h2>Liste des Membres</h2>
+      <input type="text" id="members-search" placeholder="Rechercher un membre..." class="search-bar">
       <div id="members-list"></div>
     </section>
 
@@ -59,6 +47,7 @@
     <section id="contributions" class="page">
       <h2>Cotisations</h2>
       <p>Cotisation mensuelle : 2000 FCFA</p>
+      <input type="text" id="contributions-search" placeholder="Rechercher une cotisation..." class="search-bar">
       <div id="contributions-list"></div>
       <button class="cta-button" onclick="payContribution()">Payer via Wave/Orange Money</button>
     </section>
@@ -66,17 +55,63 @@
     <!-- Page des activités -->
     <section id="activities" class="page">
       <h2>Activités à venir</h2>
+      <input type="text" id="activities-search" placeholder="Rechercher une activité..." class="search-bar">
       <div id="activities-list"></div>
     </section>
 
     <!-- Page de la galerie -->
     <section id="gallery" class="page">
       <h2>Galerie</h2>
+      <input type="text" id="gallery-search" placeholder="Rechercher un média..." class="search-bar">
       <div id="gallery-content" class="gallery-grid"></div>
+    </section>
+
+    <!-- Page des messages -->
+    <section id="messages" class="page">
+      <h2>Messages</h2>
+      <input type="text" id="messages-search" placeholder="Rechercher un message..." class="search-bar">
+      <div id="messages-list"></div>
+    </section>
+
+    <!-- Page Coran -->
+    <section id="coran" class="page">
+      <h2>Coran - 30 Juz'</h2>
+      <input type="text" id="coran-search" placeholder="Rechercher un juz..." class="search-bar">
+      <div id="coran-content"></div>
+    </section>
+
+    <!-- Espace personnel -->
+    <section id="personal" class="page">
+      <div id="personal-login" style="display: block;">
+        <h2>Espace Personnel</h2>
+        <form id="personal-login-form">
+          <label for="personal-firstname-lastname">Prénom et Nom</label>
+          <input type="text" id="personal-firstname-lastname" placeholder="Prénom Nom" required>
+          <label for="personal-member-code">Numéro de Membre</label>
+          <input type="text" id="personal-member-code" placeholder="Ex. : MEMBRE001" required>
+          <label for="personal-password">Mot de passe (Date de naissance : JJMMAAAA)</label>
+          <input type="password" id="personal-password" placeholder="Ex. : 10012005" required>
+          <button type="submit" class="cta-button">Se connecter</button>
+        </form>
+        <p id="personal-error-message" style="color: red; display: none;"></p>
+      </div>
+      <div id="personal-content" style="display: none;">
+        <h2 id="personal-title">Mon Espace Personnel</h2>
+        <button class="cta-button" onclick="logoutPersonal()">Se déconnecter</button>
+        <div id="personal-info"></div>
+        <h3>Mes Cotisations</h3>
+        <div id="personal-contributions"></div>
+        <h3>Suggestions</h3>
+        <form id="suggestion-form">
+          <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
+          <button type="submit" class="cta-button">Envoyer</button>
+        </form>
+      </div>
     </section>
 
     <!-- Espace secret -->
     <section id="secret" class="page">
+      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
       <h2>Espace Secret</h2>
       <div class="tabs">
         <button class="tab-button active" onclick="showTab('add-member')">Ajouter un Membre</button>
@@ -90,6 +125,7 @@
         <button class="tab-button" onclick="showTab('internal-docs')">Documents Internes</button>
         <button class="tab-button" onclick="showTab('suggestions-admin')">Suggestions</button>
         <button class="tab-button" onclick="showTab('stats')">Statistiques</button>
+        <button class="tab-button" onclick="showTab('video-calls')">Appels</button>
       </div>
       <div id="add-member" class="tab-content active">
         <h3>Ajouter un Membre</h3>
@@ -120,6 +156,7 @@
       </div>
       <div id="edit-member" class="tab-content">
         <h3>Modifier/Supprimer un Membre</h3>
+        <input type="text" id="edit-member-search" placeholder="Rechercher un membre..." class="search-bar">
         <div id="edit-members-list"></div>
         <form id="delete-member-form" style="display: none;">
           <input type="text" id="delete-member-code" placeholder="Code président (0000)" required>
@@ -134,6 +171,7 @@
           <button type="submit" class="cta-button">Ajouter Cotisation</button>
         </form>
         <h3>Marquer les Paiements</h3>
+        <input type="text" id="contributions-admin-search" placeholder="Rechercher une cotisation..." class="search-bar">
         <div id="contributions-admin-list"></div>
       </div>
       <div id="gallery-admin" class="tab-content">
@@ -142,6 +180,7 @@
           <input type="file" id="gallery-file" accept="image/*,video/*" required>
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="gallery-admin-search" placeholder="Rechercher un média..." class="search-bar">
         <div id="gallery-admin-list"></div>
       </div>
       <div id="activities-admin" class="tab-content">
@@ -152,6 +191,7 @@
           <input type="file" id="activity-file" accept="image/*">
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="activities-admin-search" placeholder="Rechercher une activité..." class="search-bar">
         <div id="activities-admin-list"></div>
       </div>
       <div id="messages-admin" class="tab-content">
@@ -160,6 +200,7 @@
           <textarea id="message-text" placeholder="Message ou notification" required></textarea>
           <button type="submit" class="cta-button">Envoyer</button>
         </form>
+        <input type="text" id="messages-admin-search" placeholder="Rechercher un message..." class="search-bar">
         <div id="messages-admin-list"></div>
       </div>
       <div id="notes" class="tab-content">
@@ -169,6 +210,7 @@
           <textarea id="note-text" placeholder="Contenu de la note" required></textarea>
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="notes-search" placeholder="Rechercher une note..." class="search-bar">
         <div id="notes-list"></div>
       </div>
       <div id="sensitive-files" class="tab-content">
@@ -177,6 +219,7 @@
           <input type="password" id="sensitive-files-password" placeholder="Mot de passe (0000)" required>
           <button type="submit" class="cta-button">Accéder</button>
         </form>
+        <input type="text" id="sensitive-files-search" placeholder="Rechercher un fichier..." class="search-bar" style="display: none;">
         <div id="sensitive-files-content" style="display: none;">
           <form id="add-sensitive-file-form">
             <input type="file" id="sensitive-file" accept="*" required>
@@ -191,10 +234,12 @@
           <input type="file" id="internal-doc" accept="*" required>
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="internal-docs-search" placeholder="Rechercher un document..." class="search-bar">
         <div id="internal-docs-list"></div>
       </div>
       <div id="suggestions-admin" class="tab-content">
         <h3>Suggestions des Membres</h3>
+        <input type="text" id="suggestions-search" placeholder="Rechercher une suggestion..." class="search-bar">
         <div id="suggestions-list"></div>
       </div>
       <div id="stats" class="tab-content">
@@ -204,45 +249,14 @@
         <canvas id="stats-status"></canvas>
         <canvas id="stats-contributions"></canvas>
       </div>
-    </section>
-
-    <!-- Page des messages -->
-    <section id="messages" class="page">
-      <h2>Messages</h2>
-      <div id="messages-list"></div>
-    </section>
-
-    <!-- Page Coran -->
-    <section id="coran" class="page">
-      <h2>Coran - 30 Juz'</h2>
-      <div id="coran-content"></div>
-    </section>
-
-    <!-- Espace personnel -->
-    <section id="personal" class="page">
-      <div id="personal-login">
-        <h2>Espace Personnel</h2>
-        <form id="personal-login-form">
-          <label for="personal-firstname-lastname">Prénom et Nom</label>
-          <input type="text" id="personal-firstname-lastname" placeholder="Prénom Nom" required>
-          <label for="personal-member-code">Numéro de Membre</label>
-          <input type="text" id="personal-member-code" placeholder="Ex. : MEMBRE001" required>
-          <label for="personal-password">Mot de passe (Date de naissance : JJMMAAAA)</label>
-          <input type="password" id="personal-password" placeholder="Ex. : 10012005" required>
-          <button type="submit" class="cta-button">Se connecter</button>
-        </form>
-        <p id="personal-error-message" style="color: red; display: none;"></p>
-      </div>
-      <div id="personal-content" style="display: none;">
-        <h2 id="personal-title">Mon Espace Personnel</h2>
-        <div id="personal-info"></div>
-        <h3>Mes Cotisations</h3>
-        <div id="personal-contributions"></div>
-        <h3>Suggestions</h3>
-        <form id="suggestion-form">
-          <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
-          <button type="submit" class="cta-button">Envoyer</button>
-        </form>
+      <div id="video-calls" class="tab-content">
+        <h3>Appels Vidéo & Audio</h3>
+        <input type="text" id="video-calls-search" placeholder="Rechercher un membre..." class="search-bar">
+        <div id="members-call-list"></div>
+        <button class="cta-button" onclick="callAllMembers()">Appeler tout le monde</button>
+        <button class="cta-button" onclick="startSelectedCall('video')">Lancer Appel Vidéo</button>
+        <button class="cta-button" onclick="startSelectedCall('audio')">Lancer Appel Audio</button>
+        <div id="video-call-container" style="width: 100%; height: 500px;"></div>
       </div>
     </section>
 
@@ -275,7 +289,23 @@
   <div class="chatbot-button">
     <span class="material-icons">chat</span>
   </div>
+  <div id="chatbot" class="chatbot-container" style="display: none;">
+    <div class="chatbot-header">
+      <h3>Assistant ANSAR</h3>
+      <span class="material-icons" onclick="toggleChatbot()">close</span>
+    </div>
+    <div id="chatbot-messages"></div>
+    <form id="chatbot-form">
+      <input type="text" id="chatbot-input" placeholder="Posez une question..." required>
+      <button type="submit" class="cta-button"><span class="material-icons">send</span></button>
+    </form>
+    <div id="secret-entry" style="display: none;">
+      <input type="password" id="secret-password" placeholder="Mot de passe (JESUISMEMBRE66)">
+      <button class="cta-button" onclick="enterSecret()">Entrée</button>
+    </div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="chatbotResponses.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
