@@ -9,12 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Amiri&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/@whereby.com/browser-sdk"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
     <nav class="top-nav">
       <img src="assets/images/logo.png" alt="Logo ANSAR ALMOUYASSAR" class="logo">
-      <span class="material-icons" onclick="showPage('settings')">settings</span>
+      <span class="material-icons settings-icon" onclick="showPage('settings')">settings</span>
     </nav>
   </header>
   <main>
@@ -27,12 +28,8 @@
           <source src="assets/videos/intro.mp4" type="video/mp4">
           Votre navigateur ne supporte pas la vidéo.
         </video>
-        <div id="events-countdown"></div>
-        <div id="message-popup" class="message-popup" style="display: none;">
-          <h3 id="message-popup-title"></h3>
-          <p id="message-popup-content"></p>
-          <button class="cta-button" onclick="closeMessagePopup()">Fermer</button>
-        </div>
+        <div id="event-countdowns"></div>
+        <div id="message-popups"></div>
       </div>
     </section>
 
@@ -69,7 +66,7 @@
       <div id="coran-content"></div>
     </section>
 
-    <!-- Page bibliothèque -->
+    <!-- Page Bibliothèque -->
     <section id="library" class="page">
       <h2>Bibliothèque</h2>
       <input type="text" id="library-search" placeholder="Rechercher un livre..." class="search-bar">
@@ -100,7 +97,7 @@
           <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
           <button type="submit" class="cta-button">Envoyer</button>
         </form>
-        <button class="cta-button" onclick="logoutPersonal()">Se déconnecter</button>
+        <button class="cta-button logout-button" onclick="logoutPersonal()">Se déconnecter</button>
       </div>
     </section>
 
@@ -114,18 +111,21 @@
         <button class="tab-button" onclick="showTab('gallery-admin')">Galerie</button>
         <button class="tab-button" onclick="showTab('events-admin')">Événements</button>
         <button class="tab-button" onclick="showTab('messages-admin')">Messages</button>
-        <button class="tab-button" onclick="showTab('auto-messages')">Messages Automatisés</button>
         <button class="tab-button" onclick="showTab('notes')">Notes</button>
         <button class="tab-button" onclick="showTab('internal-docs')">Documents Internes</button>
         <button class="tab-button" onclick="showTab('suggestions-admin')">Suggestions</button>
         <button class="tab-button" onclick="showTab('stats')">Statistiques</button>
         <button class="tab-button" onclick="showTab('video-calls')">Appels</button>
+        <button class="tab-button" onclick="showTab('auto-messages')">Messages Automatisés</button>
+        <button class="tab-button" onclick="showTab('treasurer')">Cotisations (Trésorier)</button>
+        <button class="tab-button" onclick="showTab('president')">Fichiers Présidentiels</button>
+        <button class="tab-button" onclick="showTab('secretary')">Fichiers Secrétaire</button>
       </div>
       <div id="add-member" class="tab-content active">
         <h3>Ajouter un Membre</h3>
         <form id="add-member-form">
-          <input type="text" id="new-member-firstname" placeholder="Prénom" required>
-          <input type="text" id="new-member-lastname" placeholder="Nom" required>
+          <input type="text" id="new-member-firstname" placeholder="Prénom (obligatoire)" required>
+          <input type="text" id="new-member-lastname" placeholder="Nom (obligatoire)" required>
           <input type="number" id="new-member-age" placeholder="Âge">
           <input type="text" id="new-member-dob" placeholder="Date de naissance (JJMMAAAA)">
           <input type="text" id="new-member-birthplace" placeholder="Lieu de naissance">
@@ -164,6 +164,7 @@
           <input type="file" id="gallery-file" accept="image/*,video/*" required>
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="gallery-admin-search" placeholder="Rechercher un média..." class="search-bar">
         <div id="gallery-admin-list"></div>
       </div>
       <div id="events-admin" class="tab-content">
@@ -186,19 +187,8 @@
           <textarea id="message-text" placeholder="Contenu du message" required></textarea>
           <button type="submit" class="cta-button">Envoyer</button>
         </form>
+        <input type="text" id="messages-admin-search" placeholder="Rechercher un message..." class="search-bar">
         <div id="messages-admin-list"></div>
-      </div>
-      <div id="auto-messages" class="tab-content">
-        <h3>Messages Automatisés</h3>
-        <form id="add-auto-message-form">
-          <input type="text" id="auto-message-name" placeholder="Nom (ex. : Rappel Cotisation)" required>
-          <textarea id="auto-message-text" placeholder="Contenu du message" required></textarea>
-          <input type="date" id="auto-message-date" required>
-          <input type="time" id="auto-message-time" required>
-          <button type="submit" class="cta-button">Ajouter</button>
-        </form>
-        <input type="text" id="auto-messages-search" placeholder="Rechercher un message automatisé..." class="search-bar">
-        <div id="auto-messages-list"></div>
       </div>
       <div id="notes" class="tab-content">
         <h3>Notes</h3>
@@ -236,61 +226,55 @@
         <h3>Appels Vidéo & Audio</h3>
         <input type="text" id="video-calls-search" placeholder="Rechercher un membre..." class="search-bar">
         <div id="members-call-list"></div>
-        <input type="checkbox" id="call-all" onchange="toggleCallAll(this.checked)">
+        <input type="checkbox" id="call-all" onchange="toggleCallAll()">
         <label for="call-all">Cocher tout</label>
         <button class="cta-button" onclick="startCall('video')">Appel Vidéo</button>
         <button class="cta-button" onclick="startCall('audio')">Appel Audio</button>
         <div id="video-call-container" style="width: 100%; height: 500px;"></div>
       </div>
-    </section>
-
-    <!-- Espace trésorier -->
-    <section id="treasurer" class="page">
-      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
-      <h2>Espace Trésorier</h2>
-      <div class="tabs">
-        <button class="tab-button active" onclick="showTreasurerTab('add-contribution')">Ajouter Cotisation</button>
-        <button class="tab-button" onclick="showTreasurerTab('manage-contributions')">Gérer Cotisations</button>
+      <div id="auto-messages" class="tab-content">
+        <h3>Messages Automatisés</h3>
+        <form id="add-auto-message-form">
+          <input type="text" id="auto-message-name" placeholder="Nom (ex. : Rappel Cotisation)" required>
+          <textarea id="auto-message-text" placeholder="Contenu du message" required></textarea>
+          <input type="date" id="auto-message-date" required>
+          <input type="time" id="auto-message-time" required>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <input type="text" id="auto-messages-search" placeholder="Rechercher un message automatisé..." class="search-bar">
+        <div id="auto-messages-list"></div>
       </div>
-      <div id="add-contribution" class="tab-content active">
-        <h3>Ajouter une Cotisation</h3>
+      <div id="treasurer" class="tab-content">
+        <h3>Gestion des Cotisations (Trésorier)</h3>
         <form id="add-contribution-form">
           <input type="text" id="contribution-name" placeholder="Nom (ex. : Journée de visite)" required>
           <input type="number" id="contribution-amount" placeholder="Montant (FCFA)" required>
+          <button type="submit" class="cta-button">Ajouter Cotisation</button>
+        </form>
+        <h3>Marquer les Paiements</h3>
+        <input type="text" id="contributions-admin-search" placeholder="Rechercher une cotisation..." class="search-bar">
+        <div id="contributions-admin-list"></div>
+      </div>
+      <div id="president" class="tab-content">
+        <h3>Fichiers Présidentiels</h3>
+        <form id="add-president-file-form">
+          <input type="text" id="president-file-category" placeholder="Catégorie" required>
+          <input type="file" id="president-file" accept="application/pdf,image/*" required>
           <button type="submit" class="cta-button">Ajouter</button>
         </form>
+        <input type="text" id="president-files-search" placeholder="Rechercher un fichier..." class="search-bar">
+        <div id="president-files-list"></div>
       </div>
-      <div id="manage-contributions" class="tab-content">
-        <h3>Gérer les Cotisations</h3>
-        <input type="text" id="contributions-treasurer-search" placeholder="Rechercher un membre..." class="search-bar">
-        <div id="contributions-treasurer-list"></div>
+      <div id="secretary" class="tab-content">
+        <h3>Fichiers Secrétaire</h3>
+        <form id="add-secretary-file-form">
+          <input type="text" id="secretary-file-category" placeholder="Catégorie" required>
+          <input type="file" id="secretary-file" accept="application/pdf,image/*" required>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <input type="text" id="secretary-files-search" placeholder="Rechercher un fichier..." class="search-bar">
+        <div id="secretary-files-list"></div>
       </div>
-    </section>
-
-    <!-- Espace président -->
-    <section id="president" class="page">
-      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
-      <h2>Espace Président</h2>
-      <form id="add-president-file-form">
-        <input type="text" id="president-file-category" placeholder="Catégorie" required>
-        <input type="file" id="president-file" accept="image/*,application/pdf" required>
-        <button type="submit" class="cta-button">Ajouter</button>
-      </form>
-      <input type="text" id="president-files-search" placeholder="Rechercher un fichier..." class="search-bar">
-      <div id="president-files-list"></div>
-    </section>
-
-    <!-- Espace secrétaire -->
-    <section id="secretary" class="page">
-      <button class="cta-button back-button" onclick="showPage('home')"><span class="material-icons">arrow_back</span> Retour</button>
-      <h2>Espace Secrétaire</h2>
-      <form id="add-secretary-file-form">
-        <input type="text" id="secretary-file-category" placeholder="Catégorie" required>
-        <input type="file" id="secretary-file" accept="image/*,application/pdf" required>
-        <button type="submit" class="cta-button">Ajouter</button>
-      </form>
-      <input type="text" id="secretary-files-search" placeholder="Rechercher un fichier..." class="search-bar">
-      <div id="secretary-files-list"></div>
     </section>
 
     <!-- Page des paramètres -->
@@ -306,10 +290,10 @@
       </select>
       <h3>Liens Utiles</h3>
       <div class="links-container">
-        <a href="http://www.almouyassar.com" target="_blank" class="link-button">www.almouyassar.com</a>
-        <a href="http://www.ansar.com" target="_blank" class="link-button">www.ansar.com</a>
-        <a href="http://www.lavoiedusalut.com" target="_blank" class="link-button">www.lavoiedusalut.com</a>
-        <a href="#" target="_blank" class="link-button">Politique de Confidentialité</a>
+        <a href="https://www.almouyassar.com" target="_blank" class="link-button">www.almouyassar.com</a>
+        <a href="https://www.ansar.com" target="_blank" class="link-button">www.ansar.com</a>
+        <a href="https://www.lavoiedusalut.com" target="_blank" class="link-button">www.lavoiedusalut.com</a>
+        <a href="#" target="_blank" class="link-button">Politique de confidentialité</a>
       </div>
     </section>
   </main>
@@ -321,8 +305,8 @@
       <a href="#" class="nav-item" onclick="showPage('gallery')"><span class="material-icons">photo_library</span>Galerie</a>
       <a href="#" class="nav-item" onclick="showPage('messages')"><span class="material-icons">notifications</span>Messages</a>
       <a href="#" class="nav-item" onclick="showPage('coran')"><span class="material-icons">book</span>Coran</a>
-      <a href="#" class="nav-item" onclick="showPage('library')"><span class="material-icons">library_books</span>Bibliothèque</a>
       <a href="#" class="nav-item" onclick="showPage('personal')"><span class="material-icons">person</span>Personnel</a>
+      <a href="#" class="nav-item" onclick="showPage('library')"><span class="material-icons">library_books</span>Bibliothèque</a>
     </nav>
   </footer>
   <div class="chatbot-button">
@@ -335,17 +319,14 @@
     </div>
     <div id="chatbot-messages"></div>
     <form id="chatbot-form">
-      <div class="chatbot-input-container">
-        <input type="text" id="chatbot-input" placeholder="Posez une question...">
-        <button type="submit" class="chatbot-send"><span class="material-icons">send</span></button>
-      </div>
+      <input type="text" id="chatbot-input" placeholder="Posez une question...">
+      <button type="submit" class="cta-button"><span class="material-icons">send</span></button>
     </form>
     <div id="secret-entry" style="display: none;">
       <input type="password" id="secret-password" placeholder="Mot de passe">
       <button class="cta-button" onclick="enterSecret()">Entrée</button>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="chatbotResponses.js"></script>
   <script src="main.js"></script>
 </body>
