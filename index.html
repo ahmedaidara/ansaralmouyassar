@@ -6,7 +6,7 @@
   <title>ANSAR ALMOUYASSAR</title>
   <link rel="stylesheet" href="main.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Amiri&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -26,7 +26,7 @@
     <section id="home" class="page active">
       <div class="hero">
         <h1>ANSAR ALMOUYASSAR</h1>
-        <p>Sous la direction de notre président, <strong>Mouhamed Niang</strong>, notre association œuvre pour le développement communautaire et spirituel.</p>
+        <p>Sous la direction de notre président, <strong>Mouhamed Niang</strong>, notre association œuvre pour le développement communautaire et spirituel à travers des initiatives éducatives, spirituelles et sociales.</p>
         <video controls>
           <source src="assets/videos/intro.mp4" type="video/mp4">
           Votre navigateur ne supporte pas la vidéo.
@@ -41,7 +41,7 @@
       <h2>Connexion</h2>
       <form id="login-form">
         <label for="member-code">Code Membre</label>
-        <input type="text" id="member-code" placeholder="Entrez votre code unique" required>
+        <input type="text" id="member-code" placeholder="Ex. : MEMBRE001" required>
         <label for="password">Mot de passe (Date de naissance : JJMMAAAA)</label>
         <input type="password" id="password" placeholder="Ex. : 10012005" required>
         <button type="submit" class="cta-button">Se connecter</button>
@@ -63,59 +63,155 @@
       <button class="cta-button" onclick="payContribution()">Payer via Wave/Orange Money</button>
     </section>
 
-    <!-- Page des infos -->
-    <section id="events" class="page">
+    <!-- Page des activités -->
+    <section id="activities" class="page">
       <h2>Activités à venir</h2>
-      <div id="events-list"></div>
+      <div id="activities-list"></div>
     </section>
 
     <!-- Page de la galerie -->
     <section id="gallery" class="page">
       <h2>Galerie</h2>
-      <div id="gallery-images" class="gallery-grid"></div>
+      <div id="gallery-content" class="gallery-grid"></div>
     </section>
 
     <!-- Espace secret -->
     <section id="secret" class="page">
       <h2>Espace Secret</h2>
-      <h3>Gestion des Membres</h3>
-      <form id="add-member-form">
-        <input type="text" id="new-member-name" placeholder="Nom et Prénom" required>
-        <input type="text" id="new-member-dob" placeholder="Date de naissance (JJMMAAAA)" required>
-        <select id="new-member-status">
-          <option value="actif">Actif</option>
-          <option value="liste-noire">Liste noire</option>
-        </select>
-        <button type="submit" class="cta-button">Ajouter Membre</button>
-      </form>
-      <h3>Gestion des Cotisations</h3>
-      <form id="add-contribution-form">
-        <input type="text" id="contribution-name" placeholder="Nom (ex. : Conférence)" required>
-        <input type="number" id="contribution-amount" placeholder="Montant (FCFA)" required>
-        <button type="submit" class="cta-button">Ajouter Cotisation</button>
-      </form>
-      <h3>Suggestions des Membres</h3>
-      <div id="suggestions-list"></div>
-      <h3>Appels Audio/Vidéo</h3>
-      <button class="cta-button" onclick="startCall('group')">Lancer un appel de groupe</button>
-      <button class="cta-button" onclick="startCall('individual')">Lancer un appel individuel</button>
-      <button class="cta-button" onclick="startLive()">Lancer un live</button>
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('add-member')">Ajouter un Membre</button>
+        <button class="tab-button" onclick="showTab('edit-member')">Modifier un Membre</button>
+        <button class="tab-button" onclick="showTab('contributions-admin')">Cotisations</button>
+        <button class="tab-button" onclick="showTab('gallery-admin')">Galerie</button>
+        <button class="tab-button" onclick="showTab('activities-admin')">Activités</button>
+        <button class="tab-button" onclick="showTab('messages-admin')">Messages</button>
+        <button class="tab-button" onclick="showTab('notes')">Notes</button>
+        <button class="tab-button" onclick="showTab('sensitive-files')">Dossiers Sensibles</button>
+        <button class="tab-button" onclick="showTab('internal-docs')">Documents Internes</button>
+        <button class="tab-button" onclick="showTab('suggestions-admin')">Suggestions</button>
+        <button class="tab-button" onclick="showTab('stats')">Statistiques</button>
+      </div>
+      <div id="add-member" class="tab-content active">
+        <h3>Ajouter un Membre</h3>
+        <form id="add-member-form">
+          <input type="text" id="new-member-firstname" placeholder="Prénom" required>
+          <input type="text" id="new-member-lastname" placeholder="Nom" required>
+          <input type="number" id="new-member-age" placeholder="Âge" required>
+          <input type="text" id="new-member-dob" placeholder="Date de naissance (JJMMAAAA)" required>
+          <input type="text" id="new-member-birthplace" placeholder="Lieu de naissance" required>
+          <input type="file" id="new-member-photo" accept="image/*">
+          <input type="email" id="new-member-email" placeholder="Email" required>
+          <input type="text" id="new-member-activity" placeholder="Activité actuelle" required>
+          <input type="text" id="new-member-address" placeholder="Adresse" required>
+          <input type="tel" id="new-member-phone" placeholder="Numéro de téléphone" required>
+          <input type="text" id="new-member-residence" placeholder="Résidence actuelle" required>
+          <select id="new-member-role" required>
+            <option value="membre">Membre</option>
+            <option value="tresorier">Trésorier</option>
+            <option value="president">Président</option>
+          </select>
+          <select id="new-member-status" required>
+            <option value="actif">Actif</option>
+            <option value="inactif">Inactif</option>
+            <option value="liste-noire">Liste noire</option>
+          </select>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+      </div>
+      <div id="edit-member" class="tab-content">
+        <h3>Modifier/Supprimer un Membre</h3>
+        <div id="edit-members-list"></div>
+        <form id="delete-member-form" style="display: none;">
+          <input type="text" id="delete-member-code" placeholder="Code président (0000)" required>
+          <button type="submit" class="cta-button">Confirmer la suppression</button>
+        </form>
+      </div>
+      <div id="contributions-admin" class="tab-content">
+        <h3>Gestion des Cotisations</h3>
+        <form id="add-contribution-form">
+          <input type="text" id="contribution-name" placeholder="Nom (ex. : Conférence)" required>
+          <input type="number" id="contribution-amount" placeholder="Montant (FCFA)" required>
+          <button type="submit" class="cta-button">Ajouter Cotisation</button>
+        </form>
+        <h3>Marquer les Paiements</h3>
+        <div id="contributions-admin-list"></div>
+      </div>
+      <div id="gallery-admin" class="tab-content">
+        <h3>Ajouter à la Galerie</h3>
+        <form id="add-gallery-form">
+          <input type="file" id="gallery-file" accept="image/*,video/*" required>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+      </div>
+      <div id="activities-admin" class="tab-content">
+        <h3>Ajouter une Activité</h3>
+        <form id="add-activity-form">
+          <input type="text" id="activity-name" placeholder="Nom de l'activité" required>
+          <textarea id="activity-description" placeholder="Description" required></textarea>
+          <input type="file" id="activity-file" accept="image/*" required>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+      </div>
+      <div id="messages-admin" class="tab-content">
+        <h3>Ajouter un Message</h3>
+        <form id="add-message-form">
+          <textarea id="message-text" placeholder="Message ou notification" required></textarea>
+          <button type="submit" class="cta-button">Envoyer</button>
+        </form>
+      </div>
+      <div id="notes" class="tab-content">
+        <h3>Notes</h3>
+        <form id="add-note-form">
+          <input type="text" id="note-theme" placeholder="Thème (ex. : Réunion)" required>
+          <textarea id="note-text" placeholder="Contenu de la note" required></textarea>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <div id="notes-list"></div>
+      </div>
+      <div id="sensitive-files" class="tab-content">
+        <h3>Dossiers Sensibles</h3>
+        <form id="sensitive-files-auth">
+          <input type="password" id="sensitive-files-password" placeholder="Mot de passe (0000)" required>
+          <button type="submit" class="cta-button">Accéder</button>
+        </form>
+        <div id="sensitive-files-content" style="display: none;">
+          <form id="add-sensitive-file-form">
+            <input type="file" id="sensitive-file" accept="*" required>
+            <button type="submit" class="cta-button">Ajouter</button>
+          </form>
+          <div id="sensitive-files-list"></div>
+        </div>
+      </div>
+      <div id="internal-docs" class="tab-content">
+        <h3>Documents Internes</h3>
+        <form id="add-internal-doc-form">
+          <input type="file" id="internal-doc" accept="*" required>
+          <button type="submit" class="cta-button">Ajouter</button>
+        </form>
+        <div id="internal-docs-list"></div>
+      </div>
+      <div id="suggestions-admin" class="tab-content">
+        <h3>Suggestions des Membres</h3>
+        <div id="suggestions-list"></div>
+      </div>
+      <div id="stats" class="tab-content">
+        <h3>Statistiques</h3>
+        <canvas id="stats-total-amount"></canvas>
+        <canvas id="stats-members"></canvas>
+        <canvas id="stats-status"></canvas>
+        <canvas id="stats-contributions"></canvas>
+      </div>
     </section>
 
-    <!-- Page des notifications -->
-    <section id="notifications" class="page">
-      <h2>Notifications</h2>
-      <div id="notifications-list"></div>
+    <!-- Page des messages -->
+    <section id="messages" class="page">
+      <h2>Messages</h2>
+      <div id="messages-list"></div>
     </section>
 
     <!-- Page Coran -->
-    <section id="kamile" class="page">
+    <section id="coran" class="page">
       <h2>Coran - 30 Juz'</h2>
-      <select id="coran-language">
-        <option value="ar">Arabe</option>
-        <option value="fr">Français</option>
-        <option value="en">Anglais</option>
-      </select>
       <div id="coran-content"></div>
     </section>
 
@@ -123,6 +219,21 @@
     <section id="personal" class="page">
       <h2 id="personal-title">Mon Espace Personnel</h2>
       <div id="personal-info"></div>
+      <form id="edit-personal-form">
+        <input type="text" id="edit-firstname" placeholder="Prénom">
+        <input type="text" id="edit-lastname" placeholder="Nom">
+        <input type="number" id="edit-age" placeholder="Âge">
+        <input type="text" id="edit-dob" placeholder="Date de naissance (JJMMAAAA)">
+        <input type="text" id="edit-birthplace" placeholder="Lieu de naissance">
+        <input type="file" id="edit-photo" accept="image/*">
+        <input type="email" id="edit-email" placeholder="Email">
+        <input type="text" id="edit-activity" placeholder="Activité actuelle">
+        <input type="text" id="edit-address" placeholder="Adresse">
+        <input type="tel" id="edit-phone" placeholder="Numéro de téléphone">
+        <input type="text" id="edit-residence" placeholder="Résidence actuelle">
+        <button type="submit" class="cta-button">Modifier</button>
+      </form>
+      <button class="cta-button" onclick="deletePersonal()">Supprimer mon compte</button>
       <h3>Mes Cotisations</h3>
       <div id="personal-contributions"></div>
       <h3>Suggestions</h3>
@@ -162,10 +273,10 @@
       <a href="#" class="nav-item active" onclick="showPage('home')"><span class="material-icons">home</span>Accueil</a>
       <a href="#" class="nav-item" onclick="showPage('members')"><span class="material-icons">people</span>Membres</a>
       <a href="#" class="nav-item" onclick="showPage('contributions')"><span class="material-icons">payment</span>Cotisations</a>
-      <a href="#" class="nav-item" onclick="showPage('events')"><span class="material-icons">event</span>Infos</a>
+      <a href="#" class="nav-item" onclick="showPage('activities')"><span class="material-icons">event</span>Activités</a>
       <a href="#" class="nav-item" onclick="showPage('gallery')"><span class="material-icons">photo_library</span>Galerie</a>
-      <a href="#" class="nav-item" onclick="showPage('notifications')"><span class="material-icons">notifications</span>Notifications</a>
-      <a href="#" class="nav-item" onclick="showPage('kamile')"><span class="material-icons">book</span>Coran</a>
+      <a href="#" class="nav-item" onclick="showPage('messages')"><span class="material-icons">notifications</span>Messages</a>
+      <a href="#" class="nav-item" onclick="showPage('coran')"><span class="material-icons">book</span>Coran</a>
       <a href="#" class="nav-item" onclick="showPage('personal')"><span class="material-icons">person</span>Personnel</a>
       <a href="#" class="nav-item" onclick="showPage('settings')"><span class="material-icons">settings</span>Paramètres</a>
     </nav>
@@ -173,6 +284,7 @@
   <div class="chatbot-button">
     <span class="material-icons">chat</span>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
