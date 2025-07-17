@@ -6,6 +6,7 @@ import { getDatabase, ref, onValue, push, remove, update } from 'https://www.gst
 const firebaseConfig = {
   apiKey: "AIzaSyB7-fXR59CqNMyYgZTDAdBNpMTE_GkcOlA",
   authDomain: "ansar-93d9e.firebaseapp.com",
+  databaseURL: "https://ansar-93d9e-default-rtdb.firebaseio.com",
   projectId: "ansar-93d9e",
   storageBucket: "ansar-93d9e.firebasestorage.app",
   messagingSenderId: "697623655771",
