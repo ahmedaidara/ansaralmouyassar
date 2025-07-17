@@ -28,6 +28,10 @@ body {
   background: var(--primary-color);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
 .logo {
@@ -45,10 +49,15 @@ body {
   cursor: pointer;
 }
 
+main {
+  margin-top: 70px;
+  margin-bottom: 80px;
+  padding: 1rem;
+  min-height: calc(100vh - 150px);
+}
+
 .page {
   display: none;
-  padding: 2rem;
-  min-height: 80vh;
 }
 
 .page.active {
@@ -99,6 +108,7 @@ body {
   bottom: 0;
   width: 100%;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
 }
 
 .nav-item {
@@ -116,7 +126,7 @@ body {
 
 .chatbot-button {
   position: fixed;
-  bottom: 80px;
+  bottom: 90px;
   right: 20px;
   background: var(--accent-color);
   border-radius: 50%;
@@ -198,12 +208,17 @@ canvas {
 }
 
 @media (max-width: 768px) {
-  .page {
-    padding: 1rem;
+  main {
+    padding: 0.5rem;
   }
 
   .bottom-nav {
     flex-wrap: wrap;
     gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .nav-item {
+    font-size: 0.8rem;
   }
 }
