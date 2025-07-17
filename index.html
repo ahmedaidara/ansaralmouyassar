@@ -36,20 +36,20 @@
       </div>
     </section>
 
-    <!-- Page de connexion -->
+    <!-- Page de connexion (pour le bureau) -->
     <section id="login" class="page">
-      <h2>Connexion</h2>
+      <h2>Connexion (Bureau)</h2>
       <form id="login-form">
         <label for="member-code">Numéro de Membre</label>
-        <input type="text" id="member-code" placeholder="Ex. : MEMBRE001" required>
-        <label for="password">Mot de passe (Date de naissance : JJMMAAAA)</label>
-        <input type="password" id="password" placeholder="Ex. : 10012005" required>
+        <input type="text" id="member-code" placeholder="Ex. : ADMIN123" required>
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" placeholder="Ex. : 01012000" required>
         <button type="submit" class="cta-button">Se connecter</button>
       </form>
       <p id="error-message" style="color: red; display: none;"></p>
     </section>
 
-    <!-- Page des membres -->
+    <!-- Page des membres (publique) -->
     <section id="members" class="page">
       <h2>Liste des Membres</h2>
       <div id="members-list"></div>
@@ -137,7 +137,7 @@
         <div id="contributions-admin-list"></div>
       </div>
       <div id="gallery-admin" class="tab-content">
-        <h3>Ajouter à la Galerie</h3>
+        <h3>Gérer la Galerie</h3>
         <form id="add-gallery-form">
           <input type="file" id="gallery-file" accept="image/*,video/*" required>
           <button type="submit" class="cta-button">Ajouter</button>
@@ -155,7 +155,7 @@
         <div id="activities-admin-list"></div>
       </div>
       <div id="messages-admin" class="tab-content">
-        <h3>Ajouter un Message</h3>
+        <h3>Gérer les Messages</h3>
         <form id="add-message-form">
           <textarea id="message-text" placeholder="Message ou notification" required></textarea>
           <button type="submit" class="cta-button">Envoyer</button>
@@ -243,12 +243,6 @@
           <textarea id="suggestion-text" placeholder="Votre suggestion..." required></textarea>
           <button type="submit" class="cta-button">Envoyer</button>
         </form>
-        <h3>Paramètres de verrouillage</h3>
-        <select id="lock-duration">
-          <option value="1h">1 heure</option>
-          <option value="24h">24 heures</option>
-          <option value="48h">48 heures</option>
-        </select>
       </div>
     </section>
 
@@ -262,12 +256,6 @@
         <option value="fr">Français</option>
         <option value="en">English</option>
         <option value="ar">العربية</option>
-      </select>
-      <label>Durée de verrouillage</label>
-      <select id="settings-lock-duration">
-        <option value="1h">1 heure</option>
-        <option value="24h">24 heures</option>
-        <option value="48h">48 heures</option>
       </select>
     </section>
   </main>
